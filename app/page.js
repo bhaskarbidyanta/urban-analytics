@@ -1,5 +1,5 @@
 "use client";
-
+import incidents from "./data/incidents"; // ✅ Import incidents data
 import { GoogleMap, LoadScript, Marker, Polygon } from "@react-google-maps/api";
 import axios from "axios";
 import { useState } from "react";
@@ -18,9 +18,28 @@ function getGradientColor(t) {
   return `rgb(${r},${g},${b})`;
 }
 
+function isInside(point, polygon) {
+  let x = point.lat, y = point.lng;
+  let inside = false;
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    let xi = polygon[i].lat, yi = polygon[i].lng;
+    let xj = polygon[j].lat, yj = polygon[j].lng;
+
+    let intersect =
+      yi > y !== yj > y &&
+      x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+
+    if (intersect) inside = !inside;
+  }
+
+  return inside;
+}
+
 export default function MapPage() {
   const [center, setCenter] = useState(defaultCenter);
   const [polygons, setPolygons] = useState([]);
+  const outerPolygon = polygons[polygons.length - 1]?.paths || [];
 
   // 🔥 Fetch isochrone
   const fetchIsochrone = async (lat, lng) => {
@@ -87,6 +106,34 @@ export default function MapPage() {
           onClick={handleMapClick}
         >
           <Marker position={center} />
+          {incidents.map((incident) => {
+            const covered =
+              outerPolygon.length > 0
+                ? isInside(incident, outerPolygon)
+                : false;
+
+            let icon;
+
+            if (covered) {
+              icon = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+            } else {
+              if (incident.type === "crime") {
+                icon = "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+              } else if (incident.type === "hospital") {
+                icon = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+              } else {
+                icon = "http://maps.google.com/mapfiles/ms/icons/orange-dot.png";
+              }
+            }
+
+            return (
+              <Marker
+                key={incident.id}
+                position={{ lat: incident.lat, lng: incident.lng }}
+                icon={icon}
+              />
+            );
+          })}
 
           {/* ✅ POLYGONS */}
           {polygons.map((poly, index) => (
