@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #070b14;
+  --foreground: #f4f7ff;
+  --panel: rgba(10, 15, 28, 0.84);
+  --panel-border: rgba(134, 149, 195, 0.18);
+  --muted: #95a0c2;
+  --cyan: #45b7ff;
 }
 
 @theme inline {
@@ -12,15 +16,313 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
+  margin: 0;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  background: linear-gradient(180deg, #0a1020 0%, #060810 100%);
+}
+
+.ua-shellSimple {
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.ua-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.ua-topbar h1 {
+  margin: 6px 0 0;
+  font-size: clamp(1.8rem, 2.8vw, 2.8rem);
+  line-height: 1.05;
+}
+
+.ua-topbarActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ua-eyebrow {
+  color: var(--cyan);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.ua-button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, #ff7147, #ffb62f);
+  color: #11131b;
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ua-buttonGhost {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--foreground);
+}
+
+.ua-mapLayout {
+  position: relative;
+}
+
+.ua-mapStagePrimary {
+  position: relative;
+  height: calc(100vh - 110px);
+  min-height: 680px;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(155, 171, 219, 0.14);
+  background: #0e1423;
+}
+
+.ua-mapCanvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.ua-overlaySidebar {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 4;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ua-panel,
+.ua-mapCard {
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  border-radius: 22px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.ua-panel {
+  padding: 16px;
+}
+
+.ua-panelTitle {
+  margin-bottom: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ua-field {
+  margin-bottom: 16px;
+}
+
+.ua-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.ua-field select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(5, 10, 22, 0.86);
+  color: var(--foreground);
+  padding: 12px 14px;
+  outline: none;
+}
+
+.ua-range {
+  width: 100%;
+  accent-color: #ff5b5b;
+}
+
+.ua-muted {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.ua-legendList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ua-legendItem,
+.ua-summaryLine,
+.ua-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ua-summaryLine {
+  justify-content: space-between;
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.ua-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.ua-legendLabel {
+  text-transform: capitalize;
+}
+
+.ua-mapCard {
+  position: absolute;
+  top: 18px;
+  left: 336px;
+  z-index: 4;
+  max-width: 360px;
+  padding: 16px 18px;
+}
+
+.ua-stageKicker {
+  color: var(--cyan);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.ua-stageTitle {
+  margin-top: 6px;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.ua-stageMeta {
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.ua-focusRing {
+  position: absolute;
+  z-index: 4;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.ua-focusBarWrap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+}
+
+.ua-focusBar {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 8px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.16);
+}
+
+.ua-focusCore {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  text-align: center;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: radial-gradient(circle, rgba(22, 30, 52, 0.98), rgba(9, 13, 24, 0.94));
+}
+
+.ua-focusTitle {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ua-focusNumber {
+  margin-top: 4px;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.ua-focusLabel {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.ua-mapFooter {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  z-index: 4;
+  display: flex;
+  gap: 10px;
+  overflow: auto;
+}
+
+.ua-chip {
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(8, 12, 24, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.ua-chip strong {
+  margin-left: 4px;
+}
+
+@media (max-width: 980px) {
+  .ua-topbar,
+  .ua-topbarActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ua-mapStagePrimary {
+    height: calc(100vh - 96px);
+    min-height: 620px;
+  }
+
+  .ua-overlaySidebar,
+  .ua-mapCard {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+
+  .ua-mapCard {
+    top: auto;
+    bottom: 84px;
+  }
+
+  .ua-overlaySidebar {
+    max-width: 320px;
+  }
 }
