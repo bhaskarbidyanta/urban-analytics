@@ -115,12 +115,13 @@ export default function MapPage() {
   const [polygons, setPolygons] = useState([]);
   const [matrixByIncident, setMatrixByIncident] = useState({});
   const [matrixHeader, setMatrixHeader] = useState(null);
-  const [focusRadiusKm, setFocusRadiusKm] = useState(1.6);
+  const [focusRadiusKm, setFocusRadiusKm] = useState(5);
   const [hoverPoint, setHoverPoint] = useState(null);
   const [hoverGeoPoint, setHoverGeoPoint] = useState(null);
   const [mapZoom, setMapZoom] = useState(12);
   const [problemType, setProblemType] = useState("all");
-  const [showLocationPoints, setShowLocationPoints] = useState(true);
+  const [visibleLayers, setVisibleLayers] = useState(["incidents", "stations"]);
+  const [isLayerMenuOpen, setIsLayerMenuOpen] = useState(false);
   const outerPolygon = polygons[polygons.length - 1]?.paths || [];
 
   useEffect(() => {
@@ -253,6 +254,16 @@ export default function MapPage() {
   };
   const focusBars = buildFocusBars(nearbyTypeCounts);
   const latestRows = filteredIncidents.slice(0, 6);
+  const showIncidents = visibleLayers.includes("incidents");
+  const showStations = visibleLayers.includes("stations");
+
+  const toggleLayer = (layer) => {
+    setVisibleLayers((current) =>
+      current.includes(layer)
+        ? current.filter((item) => item !== layer)
+        : [...current, layer]
+    );
+  };
 
   return (
       <div className="ua-shell ua-shellSimple">
@@ -271,12 +282,34 @@ export default function MapPage() {
           </div>
 
           <div className="ua-topbarActions">
-            <button
-              className="ua-button ua-buttonGhost"
-              onClick={() => setShowLocationPoints((current) => !current)}
-            >
-              {showLocationPoints ? "Hide Points" : "Show Points"}
-            </button>
+            <div className="ua-layerMenu">
+              <button
+                className="ua-button ua-buttonGhost"
+                onClick={() => setIsLayerMenuOpen((current) => !current)}
+              >
+                Show Layers
+              </button>
+              {isLayerMenuOpen && (
+                <div className="ua-layerDropdown">
+                  <label className="ua-layerOption">
+                    <input
+                      type="checkbox"
+                      checked={showIncidents}
+                      onChange={() => toggleLayer("incidents")}
+                    />
+                    <span>Incidents</span>
+                  </label>
+                  <label className="ua-layerOption">
+                    <input
+                      type="checkbox"
+                      checked={showStations}
+                      onChange={() => toggleLayer("stations")}
+                    />
+                    <span>Stations</span>
+                  </label>
+                </div>
+              )}
+            </div>
             <button
               className="ua-button ua-buttonGhost"
               onClick={() => fetchIsochrone(center.lat, center.lng)}
@@ -311,9 +344,9 @@ export default function MapPage() {
                 <input
                   className="ua-range"
                   type="range"
-                  min="0.5"
-                  max="5"
-                  step="0.1"
+                  min="5"
+                  max="15"
+                  step="1"
                   value={focusRadiusKm}
                   onChange={(event) => setFocusRadiusKm(Number(event.target.value))}
                 />
@@ -413,7 +446,7 @@ export default function MapPage() {
                 >
                   <Marker position={center} />
 
-                  {showLocationPoints &&
+                  {showIncidents &&
                     filteredIncidents.map((incident) => {
                       const covered =
                         outerPolygon.length > 0
@@ -452,7 +485,7 @@ export default function MapPage() {
                       );
                     })}
 
-                  {showLocationPoints &&
+                  {showStations &&
                     stations.map((station) => (
                       <Marker
                         key={station.id}

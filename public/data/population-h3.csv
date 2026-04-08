@@ -1,0 +1,24 @@
+h3_index,h3_resolution,approx_cell_area_km2,center_lat,center_lng,region_name,population_estimate,density_band,note
+86608b0b7ffffff,6,36.13,19.066205,72.855228,Dharavi-Sion-Kurla,560000,very_high,Inner-city concentration kept extremely high
+86608b0a7ffffff,6,36.13,19.014768,72.826859,Central Mumbai,520000,very_high,Dadar-Parel-Sion belt kept intentionally highest
+86608b037ffffff,6,36.13,18.915076,72.82677,South Mumbai,380000,very_high,Dense historic core with strong daytime and residential load
+86608b54fffffff,6,36.13,19.117645,72.883619,Andheri East,320000,high,Dense employment and residential mix
+86608b557ffffff,6,36.13,19.17232,72.968781,Thane West,310000,high,Thane core set to high population
+86608b097ffffff,6,36.13,19.11441,72.826948,Juhu-Santacruz,300000,high,High western suburban concentration
+86608b56fffffff,6,36.13,19.069414,72.911912,Ghatkopar-Vidyavihar,290000,high,Eastern suburban density remains elevated
+86608b517ffffff,6,36.13,19.230218,73.110954,Kalyan,270000,medium_high,Kalyan retained as medium-high
+86608b197ffffff,6,36.13,19.021147,72.940207,Chembur East,250000,medium_high,Medium-high east side residential cluster
+86608b507ffffff,6,36.13,19.178738,73.082421,Dombivli,250000,medium_high,Dense but below central Mumbai and Thane
+86608b427ffffff,6,36.13,19.223776,72.997248,Thane East-Kalwa,240000,medium_high,Urban continuity east of Thane creek
+86608b547ffffff,6,36.13,19.120865,72.940336,Powai-Vikhroli,210000,medium_high,"Mixed campuses, housing and industrial parcels"
+86608b457ffffff,6,36.13,19.265426,72.855426,Mira-Bhayandar,190000,medium,Moderate northern coastal suburb
+86608a24fffffff,6,36.13,19.233416,73.167876,Ulhasnagar-Ambernath,190000,medium,Medium population in eastern belt
+86608b437ffffff,6,36.13,19.275235,73.025736,Bhiwandi,180000,medium,Industrial-residential mix with moderate density
+86608bcc7ffffff,6,36.13,19.027467,73.053741,Vashi,170000,medium,Navi Mumbai node with moderate population
+86608b577ffffff,6,36.13,19.124071,72.997099,Airoli,150000,medium,Planned Navi Mumbai node with moderate population
+86608bc1fffffff,6,36.13,18.982223,73.138914,Panvel,125000,medium_low,Growing but still below Thane-Kalyan belt
+86608b4dfffffff,6,36.13,19.413029,72.827216,Vasai,95000,low,Vasai kept low relative to Mumbai core
+8642db48fffffff,6,36.13,19.461064,72.798908,Virar,70000,low,Virar set lower than Vasai in this dummy layer
+8642db797ffffff,6,36.13,19.522581,72.997694,Shahapur fringe,28000,very_low,Sparse outer MMR edge
+86608b8c7ffffff,6,36.13,18.667163,72.854833,Alibaug,22000,very_low,Very low coastal settlement intensity
+866088687ffffff,6,36.13,18.745702,73.39459,Lonavala-Khandala,18000,very_low,Very low hill-town population
