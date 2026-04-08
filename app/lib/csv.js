@@ -25,6 +25,7 @@ export function parseCsv(text) {
 export function normalizeStations(rows) {
   return rows.map((row) => ({
     id: Number(row.id),
+    stationType: row.station_type,
     lat: Number(row.lat),
     lng: Number(row.lng),
   }));

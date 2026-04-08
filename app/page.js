@@ -1,7 +1,8 @@
 "use client";
 
-import { GoogleMap, LoadScript, Marker, Polygon } from "@react-google-maps/api";
+import { GoogleMap, Marker, Polygon, useJsApiLoader } from "@react-google-maps/api";
 import axios from "axios";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { normalizeIncidents, normalizeStations, parseCsv } from "./lib/csv";
 
@@ -11,7 +12,7 @@ const typeColors = {
   hospital: "#45b7ff",
   fire: "#ff9d2e",
 };
-const focusPalette = ["#45b7ff", "#8d88ff", "#ffb02e", "#ff5c7d", "#51d87a", "#38c9ff"];
+const typeOrder = ["crime", "hospital", "fire"];
 const darkMapStyles = [
   { elementType: "geometry", stylers: [{ color: "#101625" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#101625" }] },
@@ -52,16 +53,19 @@ function isInside(point, polygon) {
   return inside;
 }
 
-function buildFocusBars(hoverRadius, nearbyIncidents) {
-  return Array.from({ length: 14 }, (_, index) => {
-    const incident = nearbyIncidents[index % Math.max(nearbyIncidents.length, 1)];
-    const duration = incident?.minDuration ?? 0;
+function buildFocusBars(typeCounts) {
+  const angles = [-60, 0, 60];
+
+  return typeOrder.map((type, index) => {
+    const count = typeCounts[type] || 0;
 
     return {
-      id: index,
-      angle: index * (360 / 14),
-      height: 22 + ((hoverRadius + duration + index * 13) % 46),
-      color: focusPalette[index % focusPalette.length],
+      id: `${type}-${index}`,
+      type,
+      count,
+      color: typeColors[type],
+      angle: angles[index],
+      height: 26 + Math.min(count, 10) * 10,
     };
   });
 }
@@ -101,17 +105,22 @@ function getMetersPerPixel(lat, zoom) {
 export default function MapPage() {
   const stageRef = useRef(null);
   const mapRef = useRef(null);
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+  });
   const [center, setCenter] = useState(defaultCenter);
   const [stations, setStations] = useState([]);
   const [incidents, setIncidents] = useState([]);
   const [polygons, setPolygons] = useState([]);
   const [matrixByIncident, setMatrixByIncident] = useState({});
   const [matrixHeader, setMatrixHeader] = useState(null);
-  const [hoverRadius, setHoverRadius] = useState(140);
+  const [focusRadiusKm, setFocusRadiusKm] = useState(1.6);
   const [hoverPoint, setHoverPoint] = useState(null);
   const [hoverGeoPoint, setHoverGeoPoint] = useState(null);
   const [mapZoom, setMapZoom] = useState(12);
   const [problemType, setProblemType] = useState("all");
+  const [showLocationPoints, setShowLocationPoints] = useState(true);
   const outerPolygon = polygons[polygons.length - 1]?.paths || [];
 
   useEffect(() => {
@@ -224,30 +233,50 @@ export default function MapPage() {
     });
   };
 
-  const radiusMeters =
-    hoverGeoPoint == null
-      ? 0
-      : hoverRadius * getMetersPerPixel(hoverGeoPoint.lat, mapZoom);
+  const radiusMeters = focusRadiusKm * 1000;
+  const metersPerPixel = getMetersPerPixel(
+    hoverGeoPoint?.lat ?? center.lat,
+    mapZoom
+  );
+  const hoverRadiusPixels = radiusMeters / metersPerPixel;
+  const radiusKilometers = radiusMeters / 1000;
 
   const nearbyIncidents = hoverGeoPoint
     ? filteredIncidents.filter(
         (incident) => haversineMeters(hoverGeoPoint, incident) <= radiusMeters
       )
     : [];
-
-  const focusBars = buildFocusBars(hoverRadius, nearbyIncidents);
+  const nearbyTypeCounts = {
+    crime: nearbyIncidents.filter((incident) => incident.type === "crime").length,
+    hospital: nearbyIncidents.filter((incident) => incident.type === "hospital").length,
+    fire: nearbyIncidents.filter((incident) => incident.type === "fire").length,
+  };
+  const focusBars = buildFocusBars(nearbyTypeCounts);
   const latestRows = filteredIncidents.slice(0, 6);
 
   return (
-    <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
       <div className="ua-shell ua-shellSimple">
         <header className="ua-topbar">
-          <div>
+          <div className="ua-topbarBrand">
             <div className="ua-eyebrow">Urban Analytics</div>
             <h1>Incident Response Map</h1>
+            <div className="ua-topbarNav">
+              <Link className="ua-navLink ua-navLinkActive" href="/">
+                Map
+              </Link>
+              <Link className="ua-navLink" href="/matrix-results">
+                Matrix Results
+              </Link>
+            </div>
           </div>
 
           <div className="ua-topbarActions">
+            <button
+              className="ua-button ua-buttonGhost"
+              onClick={() => setShowLocationPoints((current) => !current)}
+            >
+              {showLocationPoints ? "Hide Points" : "Show Points"}
+            </button>
             <button
               className="ua-button ua-buttonGhost"
               onClick={() => fetchIsochrone(center.lat, center.lng)}
@@ -282,23 +311,51 @@ export default function MapPage() {
                 <input
                   className="ua-range"
                   type="range"
-                  min="80"
-                  max="220"
-                  value={hoverRadius}
-                  onChange={(event) => setHoverRadius(Number(event.target.value))}
+                  min="0.5"
+                  max="5"
+                  step="0.1"
+                  value={focusRadiusKm}
+                  onChange={(event) => setFocusRadiusKm(Number(event.target.value))}
                 />
                 <div className="ua-muted">
-                  {nearbyIncidents.length} reports within {hoverRadius}px
+                  {nearbyIncidents.length} reports within {radiusKilometers.toFixed(2)} km
                 </div>
               </div>
 
               <div className="ua-legendList">
-                {Object.entries(typeColors).map(([type, color]) => (
+                {typeOrder.map((type) => (
                   <div key={type} className="ua-legendItem">
-                    <span className="ua-dot" style={{ backgroundColor: color }} />
+                    <span className="ua-dot" style={{ backgroundColor: typeColors[type] }} />
                     <span className="ua-legendLabel">{type}</span>
+                    <strong>{nearbyTypeCounts[type]}</strong>
                   </div>
                 ))}
+              </div>
+            </section>
+
+            <section className="ua-panel">
+              <div className="ua-panelTitle">Legend</div>
+              <div className="ua-legendList">
+                <div className="ua-legendItem">
+                  <span className="ua-dot" style={{ backgroundColor: "#ff5b5b" }} />
+                  <span className="ua-legendLabel">Crime Incident</span>
+                </div>
+                <div className="ua-legendItem">
+                  <span className="ua-dot" style={{ backgroundColor: "#45b7ff" }} />
+                  <span className="ua-legendLabel">Hospital Incident</span>
+                </div>
+                <div className="ua-legendItem">
+                  <span className="ua-dot" style={{ backgroundColor: "#ff9d2e" }} />
+                  <span className="ua-legendLabel">Fire Incident</span>
+                </div>
+                <div className="ua-legendItem">
+                  <span className="ua-dot" style={{ backgroundColor: "#f4d03f" }} />
+                  <span className="ua-legendLabel">Station</span>
+                </div>
+                <div className="ua-legendItem">
+                  <span className="ua-dot" style={{ backgroundColor: "#67d17a" }} />
+                  <span className="ua-legendLabel">Isochrone Covered Incident</span>
+                </div>
               </div>
             </section>
 
@@ -325,98 +382,106 @@ export default function MapPage() {
             }}
           >
             <div className="ua-mapCanvas">
-              <GoogleMap
-                mapContainerStyle={{ width: "100%", height: "100%" }}
-                center={center}
-                zoom={12}
-                onLoad={(map) => {
-                  mapRef.current = map;
-                  setMapZoom(map.getZoom() || 12);
-                }}
-                onClick={handleMapClick}
-                onMouseMove={handleMapMouseMove}
-                onZoomChanged={() => {
-                  if (mapRef.current) {
-                    setMapZoom(mapRef.current.getZoom() || 12);
-                  }
-                }}
-                options={{
-                  disableDefaultUI: false,
-                  streetViewControl: false,
-                  mapTypeControl: false,
-                  fullscreenControl: false,
-                  styles: darkMapStyles,
-                  gestureHandling: "greedy",
-                }}
-              >
-                <Marker position={center} />
+              {loadError ? (
+                <div className="ua-mapStatus">Failed to load Google Maps.</div>
+              ) : !isLoaded ? (
+                <div className="ua-mapStatus">Loading map...</div>
+              ) : (
+                <GoogleMap
+                  mapContainerStyle={{ width: "100%", height: "100%" }}
+                  center={center}
+                  zoom={12}
+                  onLoad={(map) => {
+                    mapRef.current = map;
+                    setMapZoom(map.getZoom() || 12);
+                  }}
+                  onClick={handleMapClick}
+                  onMouseMove={handleMapMouseMove}
+                  onZoomChanged={() => {
+                    if (mapRef.current) {
+                      setMapZoom(mapRef.current.getZoom() || 12);
+                    }
+                  }}
+                  options={{
+                    disableDefaultUI: false,
+                    streetViewControl: false,
+                    mapTypeControl: false,
+                    fullscreenControl: false,
+                    styles: darkMapStyles,
+                    gestureHandling: "greedy",
+                  }}
+                >
+                  <Marker position={center} />
 
-                {filteredIncidents.map((incident) => {
-                  const covered =
-                    outerPolygon.length > 0
-                      ? isInside(incident, outerPolygon)
-                      : false;
-                  const matrixResult = matrixByIncident[incident.id];
-                  const minDuration =
-                    typeof incident.minDuration === "number"
-                      ? incident.minDuration
-                      : matrixResult?.minDuration;
-                  const nearestStationId =
-                    incident.nearestStationId ?? matrixResult?.nearestStationId;
+                  {showLocationPoints &&
+                    filteredIncidents.map((incident) => {
+                      const covered =
+                        outerPolygon.length > 0
+                          ? isInside(incident, outerPolygon)
+                          : false;
+                      const matrixResult = matrixByIncident[incident.id];
+                      const minDuration =
+                        typeof incident.minDuration === "number"
+                          ? incident.minDuration
+                          : matrixResult?.minDuration;
+                      const nearestStationId =
+                        incident.nearestStationId ?? matrixResult?.nearestStationId;
 
-                  return (
-                    <Marker
-                      key={incident.id}
-                      position={{ lat: incident.lat, lng: incident.lng }}
-                      icon={
-                        covered
-                          ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                          : `http://maps.google.com/mapfiles/ms/icons/${
-                              incident.type === "crime"
-                                ? "red"
-                                : incident.type === "hospital"
-                                  ? "blue"
-                                  : "orange"
-                            }-dot.png`
-                      }
-                      opacity={0.84}
-                      title={
-                        nearestStationId && typeof minDuration === "number"
-                          ? `Incident ${incident.id}: station ${nearestStationId}, ${Math.round(minDuration)} sec`
-                          : `Incident ${incident.id}`
-                      }
+                      return (
+                        <Marker
+                          key={incident.id}
+                          position={{ lat: incident.lat, lng: incident.lng }}
+                          icon={
+                            covered
+                              ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                              : `http://maps.google.com/mapfiles/ms/icons/${
+                                  incident.type === "crime"
+                                    ? "red"
+                                    : incident.type === "hospital"
+                                      ? "blue"
+                                      : "orange"
+                                }-dot.png`
+                          }
+                          opacity={0.84}
+                          title={
+                            nearestStationId && typeof minDuration === "number"
+                              ? `Incident ${incident.id}: station ${nearestStationId}, ${Math.round(minDuration)} sec`
+                              : `Incident ${incident.id}`
+                          }
+                        />
+                      );
+                    })}
+
+                  {showLocationPoints &&
+                    stations.map((station) => (
+                      <Marker
+                        key={station.id}
+                        position={{ lat: station.lat, lng: station.lng }}
+                        icon="http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
+                        label={{
+                          text: `S${station.id}`,
+                          color: "#111111",
+                          fontWeight: "700",
+                        }}
+                        zIndex={1000}
+                      />
+                    ))}
+
+                  {polygons.map((poly, index) => (
+                    <Polygon
+                      key={index}
+                      paths={poly.paths}
+                      options={{
+                        fillColor: poly.color,
+                        fillOpacity: 0.16,
+                        strokeColor: poly.color,
+                        strokeWeight: 2,
+                        clickable: false,
+                      }}
                     />
-                  );
-                })}
-
-                {stations.map((station) => (
-                  <Marker
-                    key={station.id}
-                    position={{ lat: station.lat, lng: station.lng }}
-                    icon="http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
-                    label={{
-                      text: `S${station.id}`,
-                      color: "#111111",
-                      fontWeight: "700",
-                    }}
-                    zIndex={1000}
-                  />
-                ))}
-
-                {polygons.map((poly, index) => (
-                  <Polygon
-                    key={index}
-                    paths={poly.paths}
-                    options={{
-                      fillColor: poly.color,
-                      fillOpacity: 0.16,
-                      strokeColor: poly.color,
-                      strokeWeight: 2,
-                      clickable: false,
-                    }}
-                  />
-                ))}
-              </GoogleMap>
+                  ))}
+                </GoogleMap>
+              )}
             </div>
 
               <div className="ua-mapCard">
@@ -424,7 +489,7 @@ export default function MapPage() {
                 <div className="ua-stageTitle">Click anywhere to generate an isochrone</div>
                 <div className="ua-stageMeta">
                   Center {center.lat.toFixed(4)}, {center.lng.toFixed(4)} | Focus{" "}
-                  {hoverGeoPoint ? `${Math.round(radiusMeters)} m` : "-"}
+                  {hoverGeoPoint ? `${radiusKilometers.toFixed(2)} km` : "-"}
                 </div>
               </div>
 
@@ -434,36 +499,33 @@ export default function MapPage() {
                 style={{
                   left: `${hoverPoint.x}px`,
                   top: `${hoverPoint.y}px`,
-                  width: `${hoverRadius * 2}px`,
-                  height: `${hoverRadius * 2}px`,
+                  width: `${hoverRadiusPixels * 2}px`,
+                  height: `${hoverRadiusPixels * 2}px`,
                 }}
               >
-                {focusBars.map((bar) => (
-                  <div
-                    key={bar.id}
-                    className="ua-focusBarWrap"
-                    style={{ transform: `translate(-50%, -50%) rotate(${bar.angle}deg)` }}
-                  >
+                <div className="ua-focusColumns">
+                  {focusBars.map((bar) => (
                     <div
-                      className="ua-focusBar"
+                      key={bar.id}
+                      className="ua-focusColumnWrap"
                       style={{
-                        height: `${bar.height}px`,
-                        background: bar.color,
+                        transform: `translate(-50%, -50%) rotate(${bar.angle}deg)`,
                       }}
-                    />
-                  </div>
-                ))}
-
-                <div
-                  className="ua-focusCore"
-                  style={{
-                    width: `${Math.max(118, hoverRadius * 0.76)}px`,
-                    height: `${Math.max(118, hoverRadius * 0.76)}px`,
-                  }}
-                >
-                  <div className="ua-focusTitle">Focus</div>
-                  <div className="ua-focusNumber">{nearbyIncidents.length}</div>
-                  <div className="ua-focusLabel">reports</div>
+                      title={`${bar.type}: ${bar.count}`}
+                    >
+                      <div className="ua-focusColumn">
+                        <div className="ua-focusValue">{bar.count}</div>
+                        <div
+                          className="ua-focusColumnBar"
+                          style={{
+                            height: `${bar.height}px`,
+                            background: bar.color,
+                          }}
+                        />
+                        <div className="ua-focusType">{bar.type}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -482,7 +544,6 @@ export default function MapPage() {
             </div>
           </main>
         </div>
-      </div>
-    </LoadScript>
+    </div>
   );
 }

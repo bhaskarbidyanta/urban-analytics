@@ -68,6 +68,7 @@ export async function POST(req) {
         );
 
         let nearestStationId = null;
+        let nearestStationType = null;
         let minDuration = null;
 
         durationsFromStations.forEach((duration, stationIndex) => {
@@ -77,6 +78,7 @@ export async function POST(req) {
           ) {
             minDuration = duration;
             nearestStationId = stations[stationIndex]?.id ?? null;
+            nearestStationType = stations[stationIndex]?.stationType ?? null;
           }
         });
 
@@ -87,6 +89,7 @@ export async function POST(req) {
           lng: incident.lng,
           durations: durationsFromStations,
           nearestStationId,
+          nearestStationType,
           minDuration,
         });
       });
@@ -98,6 +101,7 @@ export async function POST(req) {
       lat: result.lat,
       lng: result.lng,
       nearestStationId: result.nearestStationId,
+      nearestStationType: result.nearestStationType,
       minDuration: result.minDuration,
       durations: result.durations,
     }));
@@ -108,6 +112,7 @@ export async function POST(req) {
       lat: incident.lat,
       lng: incident.lng,
       nearestStationId: incident.nearestStationId ?? "",
+      nearestStationType: incident.nearestStationType ?? "",
       minDurationSeconds:
         typeof incident.minDuration === "number"
           ? Math.round(incident.minDuration)
