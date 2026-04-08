@@ -15,7 +15,12 @@ function chunkArray(arr, size) {
 
 export async function POST(req) {
   try {
-    const { stations, incidents } = await req.json();
+    const {
+      stations,
+      incidents,
+      datasetName = "incidents",
+      outputFileName,
+    } = await req.json();
 
     if (!process.env.ORS_API_KEY) {
       return Response.json(
@@ -84,7 +89,7 @@ export async function POST(req) {
 
         finalResults.push({
           incidentId: incident.id,
-          incidentType: incident.type,
+          incidentType: incident.type ?? datasetName,
           lat: incident.lat,
           lng: incident.lng,
           durations: durationsFromStations,
@@ -124,14 +129,17 @@ export async function POST(req) {
     }));
 
     const outputDir = path.join(process.cwd(), "public", "data");
-    const outputPath = path.join(outputDir, "incidents-with-matrix.csv");
+    const safeFileName =
+      outputFileName ||
+      `${datasetName.replace(/[^a-z0-9-_]/gi, "-").toLowerCase()}-with-matrix.csv`;
+    const outputPath = path.join(outputDir, safeFileName);
     await mkdir(outputDir, { recursive: true });
     await writeFile(outputPath, stringifyCsv(csvRows), "utf8");
 
     return Response.json({
       results: finalResults,
       incidents: incidentsWithMatrix,
-      outputFile: "/data/incidents-with-matrix.csv",
+      outputFile: `/data/${safeFileName}`,
     });
   } catch (error) {
     console.error(error.response?.data || error.message);

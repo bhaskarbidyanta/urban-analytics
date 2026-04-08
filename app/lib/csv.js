@@ -40,6 +40,21 @@ export function normalizeIncidents(rows) {
   }));
 }
 
+export function normalizePopulationCells(rows) {
+  return rows.map((row, index) => ({
+    id: row.h3_index || `cell-${index + 1}`,
+    h3Index: row.h3_index || "",
+    h3Resolution: Number(row.h3_resolution),
+    areaKm2: Number(row.approx_cell_area_km2),
+    lat: Number(row.center_lat),
+    lng: Number(row.center_lng),
+    regionName: row.region_name || `Region ${index + 1}`,
+    population: Number(row.population_estimate),
+    densityBand: row.density_band || "",
+    note: row.note || "",
+  }));
+}
+
 export function stringifyCsv(rows) {
   if (!rows.length) {
     return "";

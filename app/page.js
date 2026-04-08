@@ -3,6 +3,7 @@
 import { GoogleMap, Marker, Polygon, useJsApiLoader } from "@react-google-maps/api";
 import axios from "axios";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { normalizeIncidents, normalizeStations, parseCsv } from "./lib/csv";
 
@@ -25,10 +26,8 @@ const darkMapStyles = [
 function getGradientColor(t) {
   const start = [255, 165, 0];
   const end = [138, 43, 226];
-  const r = Math.round(start[0] + t * (end[0] - start[0]));
-  const g = Math.round(start[1] + t * (end[1] - start[1]));
-  const b = Math.round(start[2] + t * (end[2] - start[2]));
-  return `rgb(${r},${g},${b})`;
+  const rgb = start.map((value, index) => Math.round(value + t * (end[index] - value)));
+  return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
 }
 
 function isInside(point, polygon) {
@@ -102,26 +101,41 @@ function getMetersPerPixel(lat, zoom) {
   );
 }
 
+function getMatrixErrorMessage(error) {
+  const status = error?.response?.status;
+
+  if (status === 429) {
+    return "OpenRouteService rate limit hit. Wait a bit and try the incident matrix again.";
+  }
+
+  return (
+    error?.response?.data?.error ||
+    error?.message ||
+    "Matrix run failed."
+  );
+}
+
 export default function MapPage() {
-  const stageRef = useRef(null);
-  const mapRef = useRef(null);
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
   });
+  const router = useRouter();
+  const stageRef = useRef(null);
+  const mapRef = useRef(null);
   const [center, setCenter] = useState(defaultCenter);
   const [stations, setStations] = useState([]);
   const [incidents, setIncidents] = useState([]);
   const [polygons, setPolygons] = useState([]);
   const [matrixByIncident, setMatrixByIncident] = useState({});
   const [matrixHeader, setMatrixHeader] = useState(null);
-  const [focusRadiusKm, setFocusRadiusKm] = useState(5);
+  const [matrixError, setMatrixError] = useState("");
+  const [matrixLoading, setMatrixLoading] = useState(false);
+  const [focusRadiusKm, setFocusRadiusKm] = useState(1.6);
   const [hoverPoint, setHoverPoint] = useState(null);
   const [hoverGeoPoint, setHoverGeoPoint] = useState(null);
   const [mapZoom, setMapZoom] = useState(12);
   const [problemType, setProblemType] = useState("all");
-  const [visibleLayers, setVisibleLayers] = useState(["incidents", "stations"]);
-  const [isLayerMenuOpen, setIsLayerMenuOpen] = useState(false);
   const outerPolygon = polygons[polygons.length - 1]?.paths || [];
 
   useEffect(() => {
@@ -177,11 +191,20 @@ export default function MapPage() {
     }
   };
 
-  const fetchMatrix = async () => {
+  const fetchIncidentMatrix = async () => {
+    if (!stations.length || !incidents.length) {
+      return;
+    }
+
+    setMatrixLoading(true);
+    setMatrixError("");
+
     try {
       const res = await axios.post("/api/matrix", {
         stations,
         incidents,
+        datasetName: "incidents",
+        outputFileName: "incidents-with-matrix.csv",
       });
 
       const nextMatrix = Object.fromEntries(
@@ -204,8 +227,13 @@ export default function MapPage() {
           averageDuration == null ? null : (averageDuration / 60).toFixed(1),
         outputFile: res.data.outputFile || null,
       });
-    } catch (err) {
-      console.error("Matrix error:", err);
+
+      router.push("/matrix-results");
+    } catch (error) {
+      setMatrixError(getMatrixErrorMessage(error));
+      console.error("Incident matrix error:", error);
+    } finally {
+      setMatrixLoading(false);
     }
   };
 
@@ -254,16 +282,6 @@ export default function MapPage() {
   };
   const focusBars = buildFocusBars(nearbyTypeCounts);
   const latestRows = filteredIncidents.slice(0, 6);
-  const showIncidents = visibleLayers.includes("incidents");
-  const showStations = visibleLayers.includes("stations");
-
-  const toggleLayer = (layer) => {
-    setVisibleLayers((current) =>
-      current.includes(layer)
-        ? current.filter((item) => item !== layer)
-        : [...current, layer]
-    );
-  };
 
   return (
       <div className="ua-shell ua-shellSimple">
@@ -276,48 +294,27 @@ export default function MapPage() {
                 Map
               </Link>
               <Link className="ua-navLink" href="/matrix-results">
-                Matrix Results
+                Incident Matrix
+              </Link>
+              <Link className="ua-navLink" href="/equity">
+                Equity Analytics
               </Link>
             </div>
           </div>
 
           <div className="ua-topbarActions">
-            <div className="ua-layerMenu">
-              <button
-                className="ua-button ua-buttonGhost"
-                onClick={() => setIsLayerMenuOpen((current) => !current)}
-              >
-                Show Layers
-              </button>
-              {isLayerMenuOpen && (
-                <div className="ua-layerDropdown">
-                  <label className="ua-layerOption">
-                    <input
-                      type="checkbox"
-                      checked={showIncidents}
-                      onChange={() => toggleLayer("incidents")}
-                    />
-                    <span>Incidents</span>
-                  </label>
-                  <label className="ua-layerOption">
-                    <input
-                      type="checkbox"
-                      checked={showStations}
-                      onChange={() => toggleLayer("stations")}
-                    />
-                    <span>Stations</span>
-                  </label>
-                </div>
-              )}
-            </div>
             <button
               className="ua-button ua-buttonGhost"
               onClick={() => fetchIsochrone(center.lat, center.lng)}
             >
               Generate Isochrone
             </button>
-            <button className="ua-button" onClick={fetchMatrix}>
-              Run Matrix
+            <button
+              className="ua-button"
+              onClick={fetchIncidentMatrix}
+              disabled={matrixLoading}
+            >
+              {matrixLoading ? "Running Incident Matrix..." : "Run Incident Matrix"}
             </button>
           </div>
         </header>
@@ -344,7 +341,7 @@ export default function MapPage() {
                 <input
                   className="ua-range"
                   type="range"
-                  min="5"
+                  min="2"
                   max="15"
                   step="1"
                   value={focusRadiusKm}
@@ -367,33 +364,7 @@ export default function MapPage() {
             </section>
 
             <section className="ua-panel">
-              <div className="ua-panelTitle">Legend</div>
-              <div className="ua-legendList">
-                <div className="ua-legendItem">
-                  <span className="ua-dot" style={{ backgroundColor: "#ff5b5b" }} />
-                  <span className="ua-legendLabel">Crime Incident</span>
-                </div>
-                <div className="ua-legendItem">
-                  <span className="ua-dot" style={{ backgroundColor: "#45b7ff" }} />
-                  <span className="ua-legendLabel">Hospital Incident</span>
-                </div>
-                <div className="ua-legendItem">
-                  <span className="ua-dot" style={{ backgroundColor: "#ff9d2e" }} />
-                  <span className="ua-legendLabel">Fire Incident</span>
-                </div>
-                <div className="ua-legendItem">
-                  <span className="ua-dot" style={{ backgroundColor: "#f4d03f" }} />
-                  <span className="ua-legendLabel">Station</span>
-                </div>
-                <div className="ua-legendItem">
-                  <span className="ua-dot" style={{ backgroundColor: "#67d17a" }} />
-                  <span className="ua-legendLabel">Isochrone Covered Incident</span>
-                </div>
-              </div>
-            </section>
-
-            <section className="ua-panel">
-              <div className="ua-panelTitle">Matrix Header</div>
+              <div className="ua-panelTitle">Incident Matrix</div>
               <div className="ua-summaryLine">
                 Processed: <strong>{matrixHeader?.totalIncidents ?? incidents.length}</strong>
               </div>
@@ -403,7 +374,30 @@ export default function MapPage() {
               <div className="ua-summaryLine">
                 Saved file: <strong>{matrixHeader?.outputFile || "-"}</strong>
               </div>
+              <div className="ua-summaryLine">
+                Results page: <Link className="ua-navLink" href="/matrix-results">Open</Link>
+              </div>
             </section>
+
+            <section className="ua-panel">
+              <div className="ua-panelTitle">Equity</div>
+              <div className="ua-muted">
+                Spatial equity metrics have moved to a dedicated page so the map and matrix
+                workflow stay separate.
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <Link className="ua-navLink ua-navLinkActive" href="/equity">
+                  Open Equity Analytics
+                </Link>
+              </div>
+            </section>
+
+            {matrixError ? (
+              <section className="ua-panel">
+                <div className="ua-panelTitle">Matrix Status</div>
+                <div className="ua-emptyState">{matrixError}</div>
+              </section>
+            ) : null}
           </aside>
 
           <main
@@ -416,7 +410,9 @@ export default function MapPage() {
           >
             <div className="ua-mapCanvas">
               {loadError ? (
-                <div className="ua-mapStatus">Failed to load Google Maps.</div>
+                <div className="ua-mapStatus">
+                  Could not load Google Maps. Check `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
+                </div>
               ) : !isLoaded ? (
                 <div className="ua-mapStatus">Loading map...</div>
               ) : (
@@ -446,59 +442,57 @@ export default function MapPage() {
                 >
                   <Marker position={center} />
 
-                  {showIncidents &&
-                    filteredIncidents.map((incident) => {
-                      const covered =
-                        outerPolygon.length > 0
-                          ? isInside(incident, outerPolygon)
-                          : false;
-                      const matrixResult = matrixByIncident[incident.id];
-                      const minDuration =
-                        typeof incident.minDuration === "number"
-                          ? incident.minDuration
-                          : matrixResult?.minDuration;
-                      const nearestStationId =
-                        incident.nearestStationId ?? matrixResult?.nearestStationId;
+                  {filteredIncidents.map((incident) => {
+                    const covered =
+                      outerPolygon.length > 0
+                        ? isInside(incident, outerPolygon)
+                        : false;
+                    const matrixResult = matrixByIncident[incident.id];
+                    const minDuration =
+                      typeof incident.minDuration === "number"
+                        ? incident.minDuration
+                        : matrixResult?.minDuration;
+                    const nearestStationId =
+                      incident.nearestStationId ?? matrixResult?.nearestStationId;
 
-                      return (
-                        <Marker
-                          key={incident.id}
-                          position={{ lat: incident.lat, lng: incident.lng }}
-                          icon={
-                            covered
-                              ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                              : `http://maps.google.com/mapfiles/ms/icons/${
-                                  incident.type === "crime"
-                                    ? "red"
-                                    : incident.type === "hospital"
-                                      ? "blue"
-                                      : "orange"
-                                }-dot.png`
-                          }
-                          opacity={0.84}
-                          title={
-                            nearestStationId && typeof minDuration === "number"
-                              ? `Incident ${incident.id}: station ${nearestStationId}, ${Math.round(minDuration)} sec`
-                              : `Incident ${incident.id}`
-                          }
-                        />
-                      );
-                    })}
-
-                  {showStations &&
-                    stations.map((station) => (
+                    return (
                       <Marker
-                        key={station.id}
-                        position={{ lat: station.lat, lng: station.lng }}
-                        icon="http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
-                        label={{
-                          text: `S${station.id}`,
-                          color: "#111111",
-                          fontWeight: "700",
-                        }}
-                        zIndex={1000}
+                        key={incident.id}
+                        position={{ lat: incident.lat, lng: incident.lng }}
+                        icon={
+                          covered
+                            ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                            : `http://maps.google.com/mapfiles/ms/icons/${
+                                incident.type === "crime"
+                                  ? "red"
+                                  : incident.type === "hospital"
+                                    ? "blue"
+                                    : "orange"
+                              }-dot.png`
+                        }
+                        opacity={0.84}
+                        title={
+                          nearestStationId && typeof minDuration === "number"
+                            ? `Incident ${incident.id}: station ${nearestStationId}, ${Math.round(minDuration)} sec`
+                            : `Incident ${incident.id}`
+                        }
                       />
-                    ))}
+                    );
+                  })}
+
+                  {stations.map((station) => (
+                    <Marker
+                      key={station.id}
+                      position={{ lat: station.lat, lng: station.lng }}
+                      icon="http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
+                      label={{
+                        text: `S${station.id}`,
+                        color: "#111111",
+                        fontWeight: "700",
+                      }}
+                      zIndex={1000}
+                    />
+                  ))}
 
                   {polygons.map((poly, index) => (
                     <Polygon
@@ -517,14 +511,14 @@ export default function MapPage() {
               )}
             </div>
 
-              <div className="ua-mapCard">
-                <div className="ua-stageKicker">Live Map</div>
-                <div className="ua-stageTitle">Click anywhere to generate an isochrone</div>
-                <div className="ua-stageMeta">
-                  Center {center.lat.toFixed(4)}, {center.lng.toFixed(4)} | Focus{" "}
-                  {hoverGeoPoint ? `${radiusKilometers.toFixed(2)} km` : "-"}
-                </div>
+            <div className="ua-mapCard">
+              <div className="ua-stageKicker">Live Map</div>
+              <div className="ua-stageTitle">Click anywhere to generate an isochrone</div>
+              <div className="ua-stageMeta">
+                Center {center.lat.toFixed(4)}, {center.lng.toFixed(4)} | Focus{" "}
+                {hoverGeoPoint ? `${radiusKilometers.toFixed(2)} km` : "-"}
               </div>
+            </div>
 
             {hoverPoint && (
               <div
@@ -577,6 +571,6 @@ export default function MapPage() {
             </div>
           </main>
         </div>
-    </div>
+      </div>
   );
 }

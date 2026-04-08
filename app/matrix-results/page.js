@@ -57,7 +57,10 @@ export default async function MatrixResultsPage() {
               Map
             </Link>
             <Link className="ua-navLink ua-navLinkActive" href="/matrix-results">
-              Matrix Results
+              Incident Matrix
+            </Link>
+            <Link className="ua-navLink" href="/equity">
+              Equity Analytics
             </Link>
           </div>
         </div>
