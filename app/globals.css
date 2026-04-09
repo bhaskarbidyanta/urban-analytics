@@ -510,6 +510,10 @@ body {
   padding: 18px 20px;
 }
 
+.ua-insightCardWide {
+  margin-top: 18px;
+}
+
 .ua-cardKicker {
   margin-bottom: 12px;
   color: #79dff7;

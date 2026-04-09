@@ -57,6 +57,25 @@ function buildGroupSummaries(cells, key) {
     .sort((a, b) => (b.population || 0) - (a.population || 0));
 }
 
+function buildStationSummaries(cells, stations) {
+  const grouped = buildGroupSummaries(cells, "nearestStationId");
+  const groupedMap = new Map(grouped.map((group) => [String(group.id), group]));
+
+  return stations.map((station) => {
+    const key = String(station.id);
+    const match = groupedMap.get(key);
+
+    return {
+      id: key,
+      stationType: station.stationType || station.type || "",
+      population: match?.population ?? 0,
+      weightedDuration: match?.weightedDuration ?? 0,
+      zones: match?.zones ?? 0,
+      averageMinutes: match?.averageMinutes ?? null,
+    };
+  });
+}
+
 function formatMetric(value, digits = 2, suffix = "") {
   return typeof value === "number" && !Number.isNaN(value)
     ? `${value.toFixed(digits)}${suffix}`
@@ -211,14 +230,18 @@ export default function EquityPage() {
   const weightedTheil = calculateWeightedTheil(weightedSamples);
   const weightedMeanMinutes = calculateWeightedMean(weightedSamples);
   const lorenzPoints = buildLorenzCurve(weightedSamples);
-  const stationSummaries = buildGroupSummaries(
-    populationRowsWithAccess,
-    "nearestStationId"
-  );
+  const stationSummaries = buildStationSummaries(populationRowsWithAccess, stations);
   const densitySummaries = buildGroupSummaries(
     populationRowsWithAccess,
     "densityBand"
   );
+  const regionSummaries = [...populationRowsWithAccess]
+    .map((cell) => ({
+      regionName: cell.regionName,
+      population: cell.population,
+      minutes: cell.minDuration / 60,
+    }))
+    .sort((a, b) => b.minutes - a.minutes);
   const { best: bestGroup, worst: worstGroup } = summarizeEquityGroups(stationSummaries);
   const servedPopulation = populationRowsWithAccess.reduce(
     (sum, cell) => sum + cell.population,
@@ -372,19 +395,41 @@ export default function EquityPage() {
           </article>
         </div>
 
+        <article className="ua-insightCard ua-insightCardWide">
+          <div className="ua-cardKicker">Region Response Times</div>
+          {regionSummaries.length > 0 ? (
+            <div className="ua-table">
+              {regionSummaries.map((region) => (
+                <div key={region.regionName} className="ua-tableRow">
+                  <span>{region.regionName}</span>
+                  <span>{region.population.toLocaleString()} people</span>
+                  <strong>{formatMetric(region.minutes, 1, " min")}</strong>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="ua-emptyState">
+              Run the equity matrix to see average response time by region.
+            </div>
+          )}
+        </article>
+
         <div className="ua-equityTables">
           <article className="ua-insightCard">
             <div className="ua-cardKicker">Station Catchments</div>
             <div className="ua-table">
-              {stationSummaries.slice(0, 5).map((group) => (
-                <div key={group.id} className="ua-tableRow">
-                  <span>Station {group.id}</span>
-                  <span>{group.population.toLocaleString()} people</span>
-                  <strong>{formatMetric(group.averageMinutes, 1, " min")}</strong>
-                </div>
-              ))}
-            </div>
-          </article>
+                {stationSummaries.map((group) => (
+                  <div key={group.id} className="ua-tableRow">
+                    <span>
+                      Station {group.id}
+                      {group.stationType ? ` (${group.stationType})` : ""}
+                    </span>
+                    <span>{group.population.toLocaleString()} people</span>
+                    <strong>{formatMetric(group.averageMinutes, 1, " min")}</strong>
+                  </div>
+                ))}
+              </div>
+            </article>
 
           <article className="ua-insightCard">
             <div className="ua-cardKicker">Density Bands</div>
