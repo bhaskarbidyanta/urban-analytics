@@ -37,29 +37,42 @@ body {
   padding: 16px;
 }
 
+.ua-shellMap {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
 .ua-topbar {
   display: flex;
   justify-content: space-between;
-  align-items: end;
+  align-items: center;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 6px 0 8px;
+  background: linear-gradient(180deg, rgba(10, 16, 32, 0.96) 0%, rgba(10, 16, 32, 0.84) 100%);
+  backdrop-filter: blur(14px);
 }
 
 .ua-topbarBrand {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .ua-topbar h1 {
-  margin: 6px 0 0;
-  font-size: clamp(1.8rem, 2.8vw, 2.8rem);
+  margin: 2px 0 0;
+  font-size: clamp(1.3rem, 2vw, 1.9rem);
   line-height: 1.05;
 }
 
 .ua-topbarActions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -125,7 +138,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: linear-gradient(135deg, #ff7147, #ffb62f);
   color: #11131b;
-  padding: 12px 18px;
+  padding: 10px 16px;
   border-radius: 999px;
   font-weight: 700;
   cursor: pointer;
@@ -142,17 +155,50 @@ body {
 }
 
 .ua-mapLayout {
-  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  min-height: calc(100vh - 102px);
+  height: calc(100vh - 102px);
+}
+
+.ua-shellMapHeaderHidden .ua-mapLayout {
+  min-height: calc(100vh - 32px);
+  height: calc(100vh - 32px);
+}
+
+.ua-mapLayoutSidebarClosed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ua-sidebar {
+  position: sticky;
+  top: 82px;
+  height: calc(100vh - 98px);
+}
+
+.ua-sidebarScroll {
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-right: 6px;
 }
 
 .ua-mapStagePrimary {
   position: relative;
-  height: calc(100vh - 110px);
+  height: calc(100vh - 102px);
   min-height: 680px;
   border-radius: 28px;
   overflow: hidden;
   border: 1px solid rgba(155, 171, 219, 0.14);
   background: #0e1423;
+}
+
+.ua-shellMapHeaderHidden .ua-mapStagePrimary {
+  height: calc(100vh - 32px);
 }
 
 .ua-mapCanvas {
@@ -169,17 +215,6 @@ body {
   color: var(--foreground);
   background: #0e1423;
   font-size: 1rem;
-}
-
-.ua-overlaySidebar {
-  position: absolute;
-  top: 18px;
-  left: 18px;
-  z-index: 4;
-  width: 300px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
 }
 
 .ua-panel,
@@ -265,11 +300,50 @@ body {
 
 .ua-mapCard {
   position: absolute;
-  top: 18px;
-  left: 336px;
+  top: 78px;
+  left: 18px;
   z-index: 4;
   max-width: 360px;
   padding: 16px 18px;
+}
+
+.ua-floatingToolbar {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  right: 18px;
+  z-index: 7;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  overflow: visible;
+  padding-bottom: 0;
+}
+
+.ua-floatChip {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  color: #151a28;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.ua-floatChipActive {
+  background: linear-gradient(135deg, #ff7147, #ffb62f);
+  color: #11131b;
+}
+
+.ua-overlayLinks {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
 }
 
 .ua-stageKicker {
@@ -584,6 +658,27 @@ body {
   gap: 12px;
 }
 
+.ua-tableCompactHead {
+  gap: 10px;
+}
+
+.ua-tableHead {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr auto;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(25, 34, 65, 0.16);
+  color: #60708f;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ua-tableHeadHotspot {
+  color: #8a5b83;
+}
+
 .ua-tableRow {
   display: grid;
   grid-template-columns: 1.2fr 1fr auto;
@@ -614,6 +709,89 @@ body {
   stroke-linejoin: round;
 }
 
+.ua-hotspotSection {
+  margin-top: 18px;
+  padding: 22px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 82, 146, 0.18);
+  background:
+    linear-gradient(180deg, rgba(63, 19, 149, 0.98) 0%, rgba(34, 8, 79, 0.98) 100%);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.28);
+}
+
+.ua-hotspotHeader {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.ua-hotspotHeader h2 {
+  margin: 4px 0 0;
+  font-size: clamp(1.8rem, 2.6vw, 3rem);
+  line-height: 1.02;
+}
+
+.ua-hotspotStep {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: linear-gradient(135deg, #ff5ba8, #ff3d88);
+  color: #3a0d69;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.ua-eyebrowHotspot,
+.ua-cardKickerHotspot {
+  color: #ff5ba8;
+}
+
+.ua-hotspotPurpose,
+.ua-hotspotCard {
+  border: 1px solid rgba(255, 116, 172, 0.42);
+  background: rgba(247, 243, 255, 0.96);
+  color: #1a2241;
+  border-radius: 24px;
+  box-shadow: 0 18px 32px rgba(8, 10, 20, 0.16);
+}
+
+.ua-hotspotPurpose {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 20px;
+  padding: 18px 22px;
+}
+
+.ua-hotspotPurpose p {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.ua-hotspotGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.ua-hotspotCard {
+  padding: 18px 20px;
+}
+
+.ua-hotspotFormula {
+  background: linear-gradient(180deg, #25105c 0%, #17053d 100%);
+  color: #edf1ff;
+}
+
+.ua-kpiCardHotspot strong {
+  font-size: 1.5rem;
+}
+
 @media (max-width: 980px) {
   .ua-topbar,
   .ua-topbarActions {
@@ -626,25 +804,50 @@ body {
     min-height: 620px;
   }
 
-  .ua-overlaySidebar,
+  .ua-shellMap {
+    height: auto;
+    overflow: visible;
+  }
+
+  .ua-mapLayout,
+  .ua-mapLayoutSidebarClosed {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .ua-shellMapHeaderHidden .ua-mapLayout,
+  .ua-shellMapHeaderHidden .ua-mapStagePrimary {
+    height: auto;
+    min-height: 620px;
+  }
+
+  .ua-sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .ua-sidebarScroll {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
   .ua-mapCard {
-    position: absolute;
     left: 12px;
     right: 12px;
-    width: auto;
+    top: 76px;
+    max-width: none;
   }
 
-  .ua-mapCard {
-    top: auto;
-    bottom: 84px;
-  }
-
-  .ua-overlaySidebar {
-    max-width: 320px;
+  .ua-floatingToolbar {
+    left: 12px;
+    right: 12px;
   }
 
   .ua-purposeCard,
+  .ua-hotspotPurpose,
   .ua-equityGrid,
+  .ua-hotspotGrid,
   .ua-equityInsights,
   .ua-equityTables,
   .ua-kpiRow {

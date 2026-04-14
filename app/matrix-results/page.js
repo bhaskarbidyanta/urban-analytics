@@ -62,6 +62,9 @@ export default async function MatrixResultsPage() {
             <Link className="ua-navLink" href="/equity">
               Equity Analytics
             </Link>
+            <Link className="ua-navLink" href="/hotspots">
+              Hotspots
+            </Link>
           </div>
         </div>
       </header>

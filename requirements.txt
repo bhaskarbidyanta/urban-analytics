@@ -1,7 +1,26 @@
+# Python/geospatial libraries used in this project
 osmnx
 networkx
 geopandas
 shapely
 matplotlib
-#npm installaxios
-#npm install @turf/turf
+
+# Frontend/runtime libraries used by the app
+# These are installed via npm/package.json, documented here for completeness.
+#next
+#react
+#react-dom
+#axios
+#@react-google-maps/api
+#@turf/turf
+#h3-js
+
+# Tooling/dev libraries used by the project
+#tailwindcss
+#@tailwindcss/postcss
+#typescript
+#eslint
+#eslint-config-next
+#@types/node
+#@types/react
+#@types/react-dom

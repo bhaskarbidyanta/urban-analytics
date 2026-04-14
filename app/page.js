@@ -4,8 +4,15 @@ import { GoogleMap, Marker, Polygon, useJsApiLoader } from "@react-google-maps/a
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { normalizeIncidents, normalizeStations, parseCsv } from "./lib/csv";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { normalizeIncidents, normalizePopulationCells, normalizeStations, parseCsv } from "./lib/csv";
+import {
+  computeGetisOrdHotspots,
+  formatHotspotLabel,
+  getHotspotBoundary,
+  getHotspotColor,
+  getHotspotFillOpacity,
+} from "./lib/hotspots";
 
 const defaultCenter = { lat: 19.044983, lng: 72.864062 };
 const typeColors = {
@@ -115,7 +122,22 @@ function getMatrixErrorMessage(error) {
   );
 }
 
+function getIsochroneErrorMessage(error) {
+  const status = error?.response?.status;
+
+  if (status === 429) {
+    return "OpenRouteService rate limit hit. Wait a bit and try the isochrone again.";
+  }
+
+  return (
+    error?.response?.data?.error ||
+    error?.message ||
+    "Isochrone generation failed."
+  );
+}
+
 export default function MapPage() {
+  const hotspotRingSize = 1;
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
@@ -126,11 +148,20 @@ export default function MapPage() {
   const [center, setCenter] = useState(defaultCenter);
   const [stations, setStations] = useState([]);
   const [incidents, setIncidents] = useState([]);
+  const [populationCells, setPopulationCells] = useState([]);
+  const [populationAccessByCell, setPopulationAccessByCell] = useState({});
   const [polygons, setPolygons] = useState([]);
+  const [isochroneError, setIsochroneError] = useState("");
   const [matrixByIncident, setMatrixByIncident] = useState({});
   const [matrixHeader, setMatrixHeader] = useState(null);
   const [matrixError, setMatrixError] = useState("");
   const [matrixLoading, setMatrixLoading] = useState(false);
+  const [showHeader, setShowHeader] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showIncidents, setShowIncidents] = useState(true);
+  const [showStations, setShowStations] = useState(true);
+  const [showIsochrones, setShowIsochrones] = useState(true);
+  const [showHotspots, setShowHotspots] = useState(true);
   const [focusRadiusKm, setFocusRadiusKm] = useState(1.6);
   const [hoverPoint, setHoverPoint] = useState(null);
   const [hoverGeoPoint, setHoverGeoPoint] = useState(null);
@@ -141,22 +172,42 @@ export default function MapPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [stationsRes, incidentsRes] = await Promise.all([
+        const [stationsRes, incidentsRes, populationRes, accessRes] = await Promise.all([
           fetch("/data/stations.csv"),
           fetch("/data/incidents.csv"),
+          fetch("/data/population-h3.csv"),
+          fetch("/data/population-h3-with-access.csv"),
         ]);
 
-        if (!stationsRes.ok || !incidentsRes.ok) {
+        if (!stationsRes.ok || !incidentsRes.ok || !populationRes.ok) {
           throw new Error("Could not load CSV data files.");
         }
 
-        const [stationsText, incidentsText] = await Promise.all([
+        const [stationsText, incidentsText, populationText, accessText] = await Promise.all([
           stationsRes.text(),
           incidentsRes.text(),
+          populationRes.text(),
+          accessRes.ok ? accessRes.text() : Promise.resolve(""),
         ]);
 
         setStations(normalizeStations(parseCsv(stationsText)));
         setIncidents(normalizeIncidents(parseCsv(incidentsText)));
+        setPopulationCells(normalizePopulationCells(parseCsv(populationText)));
+
+        if (accessText) {
+          const accessRows = parseCsv(accessText);
+          setPopulationAccessByCell(
+            Object.fromEntries(
+              accessRows.map((row) => [
+                row.incidentId,
+                {
+                  nearestStationId: row.nearestStationId || null,
+                  minDuration: Number(row.minDurationSeconds),
+                },
+              ])
+            )
+          );
+        }
       } catch (error) {
         console.error("Failed to load CSV data:", error);
       }
@@ -171,6 +222,8 @@ export default function MapPage() {
       : incidents.filter((incident) => incident.type === problemType);
 
   const fetchIsochrone = async (lat, lng) => {
+    setIsochroneError("");
+
     try {
       const res = await axios.post("/api/isochrone", { lat, lng });
       const features = res.data.features || [];
@@ -187,7 +240,8 @@ export default function MapPage() {
         })
       );
     } catch (err) {
-      console.error("Isochrone error:", err);
+      setIsochroneError(getIsochroneErrorMessage(err));
+      console.error("Isochrone error:", err?.response?.data || err?.message || err);
     }
   };
 
@@ -282,9 +336,36 @@ export default function MapPage() {
   };
   const focusBars = buildFocusBars(nearbyTypeCounts);
   const latestRows = filteredIncidents.slice(0, 6);
+  const hotspotPolygons = useMemo(() => {
+    const rows = populationCells
+      .map((cell) => ({
+        ...cell,
+        minDuration: populationAccessByCell[cell.id]?.minDuration ?? null,
+      }))
+      .filter((cell) => typeof cell.minDuration === "number" && cell.minDuration > 0)
+      .map((cell) => ({
+        id: cell.id,
+        regionName: cell.regionName,
+        lat: cell.lat,
+        lng: cell.lng,
+        value: cell.minDuration / 60,
+      }));
+
+    return computeGetisOrdHotspots(rows, {
+      ringSize: hotspotRingSize,
+      valueKey: "value",
+    }).map((row) => ({
+      ...row,
+      label: formatHotspotLabel(row.classification),
+      paths: getHotspotBoundary(row.id),
+      color: getHotspotColor(row.classification),
+      fillOpacity: getHotspotFillOpacity(row.classification),
+    }));
+  }, [hotspotRingSize, populationAccessByCell, populationCells]);
 
   return (
-      <div className="ua-shell ua-shellSimple">
+      <div className={`ua-shell ua-shellSimple ua-shellMap ${showHeader ? "" : "ua-shellMapHeaderHidden"}`}>
+        {showHeader ? (
         <header className="ua-topbar">
           <div className="ua-topbarBrand">
             <div className="ua-eyebrow">Urban Analytics</div>
@@ -299,106 +380,161 @@ export default function MapPage() {
               <Link className="ua-navLink" href="/equity">
                 Equity Analytics
               </Link>
+              <Link className="ua-navLink" href="/hotspots">
+                Hotspots
+              </Link>
             </div>
           </div>
-
-          <div className="ua-topbarActions">
-            <button
-              className="ua-button ua-buttonGhost"
-              onClick={() => fetchIsochrone(center.lat, center.lng)}
-            >
-              Generate Isochrone
-            </button>
-            <button
-              className="ua-button"
-              onClick={fetchIncidentMatrix}
-              disabled={matrixLoading}
-            >
-              {matrixLoading ? "Running Incident Matrix..." : "Run Incident Matrix"}
-            </button>
-          </div>
         </header>
+        ) : null}
 
-        <div className="ua-mapLayout">
-          <aside className="ua-overlaySidebar">
-            <section className="ua-panel">
-              <div className="ua-panelTitle">Controls</div>
-              <div className="ua-field">
-                <label>Incident type</label>
-                <select
-                  value={problemType}
-                  onChange={(event) => setProblemType(event.target.value)}
-                >
-                  <option value="all">All incident types</option>
-                  <option value="crime">Crime</option>
-                  <option value="hospital">Hospital</option>
-                  <option value="fire">Fire</option>
-                </select>
-              </div>
-
-              <div className="ua-field">
-                <label>Focus radius</label>
-                <input
-                  className="ua-range"
-                  type="range"
-                  min="2"
-                  max="15"
-                  step="1"
-                  value={focusRadiusKm}
-                  onChange={(event) => setFocusRadiusKm(Number(event.target.value))}
-                />
-                <div className="ua-muted">
-                  {nearbyIncidents.length} reports within {radiusKilometers.toFixed(2)} km
-                </div>
-              </div>
-
-              <div className="ua-legendList">
-                {typeOrder.map((type) => (
-                  <div key={type} className="ua-legendItem">
-                    <span className="ua-dot" style={{ backgroundColor: typeColors[type] }} />
-                    <span className="ua-legendLabel">{type}</span>
-                    <strong>{nearbyTypeCounts[type]}</strong>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="ua-panel">
-              <div className="ua-panelTitle">Incident Matrix</div>
-              <div className="ua-summaryLine">
-                Processed: <strong>{matrixHeader?.totalIncidents ?? incidents.length}</strong>
-              </div>
-              <div className="ua-summaryLine">
-                Average time: <strong>{matrixHeader?.averageMinutes ?? "-"}</strong>
-              </div>
-              <div className="ua-summaryLine">
-                Saved file: <strong>{matrixHeader?.outputFile || "-"}</strong>
-              </div>
-              <div className="ua-summaryLine">
-                Results page: <Link className="ua-navLink" href="/matrix-results">Open</Link>
-              </div>
-            </section>
-
-            <section className="ua-panel">
-              <div className="ua-panelTitle">Equity</div>
-              <div className="ua-muted">
-                Spatial equity metrics have moved to a dedicated page so the map and matrix
-                workflow stay separate.
-              </div>
-              <div style={{ marginTop: 12 }}>
-                <Link className="ua-navLink ua-navLinkActive" href="/equity">
-                  Open Equity Analytics
-                </Link>
-              </div>
-            </section>
-
-            {matrixError ? (
+        <div className={`ua-mapLayout ${sidebarOpen ? "ua-mapLayoutSidebarOpen" : "ua-mapLayoutSidebarClosed"}`}>
+          {sidebarOpen ? (
+          <aside className="ua-sidebar">
+            <div className="ua-sidebarScroll">
               <section className="ua-panel">
-                <div className="ua-panelTitle">Matrix Status</div>
-                <div className="ua-emptyState">{matrixError}</div>
+                <div className="ua-panelTitle">Controls</div>
+                <div className="ua-field">
+                  <label>Incident type</label>
+                  <select
+                    value={problemType}
+                    onChange={(event) => setProblemType(event.target.value)}
+                  >
+                    <option value="all">All incident types</option>
+                    <option value="crime">Crime</option>
+                    <option value="hospital">Hospital</option>
+                    <option value="fire">Fire</option>
+                  </select>
+                </div>
+
+                <div className="ua-field">
+                  <label>Focus radius</label>
+                  <input
+                    className="ua-range"
+                    type="range"
+                    min="2"
+                    max="15"
+                    step="1"
+                    value={focusRadiusKm}
+                    onChange={(event) => setFocusRadiusKm(Number(event.target.value))}
+                  />
+                  <div className="ua-muted">
+                    {nearbyIncidents.length} reports within {radiusKilometers.toFixed(2)} km
+                  </div>
+                </div>
+
+                <div className="ua-legendList">
+                  {typeOrder.map((type) => (
+                    <div key={type} className="ua-legendItem">
+                      <span className="ua-dot" style={{ backgroundColor: typeColors[type] }} />
+                      <span className="ua-legendLabel">{type}</span>
+                      <strong>{nearbyTypeCounts[type]}</strong>
+                    </div>
+                  ))}
+                </div>
               </section>
-            ) : null}
+
+              <section className="ua-panel">
+                <div className="ua-panelTitle">Locations</div>
+                <label className="ua-layerOption">
+                  <input
+                    type="checkbox"
+                    checked={showIncidents}
+                    onChange={(event) => setShowIncidents(event.target.checked)}
+                  />
+                  <span>Show incident markers</span>
+                </label>
+                <label className="ua-layerOption">
+                  <input
+                    type="checkbox"
+                    checked={showStations}
+                    onChange={(event) => setShowStations(event.target.checked)}
+                  />
+                  <span>Show station markers</span>
+                </label>
+                <label className="ua-layerOption">
+                  <input
+                    type="checkbox"
+                    checked={showIsochrones}
+                    onChange={(event) => setShowIsochrones(event.target.checked)}
+                  />
+                  <span>Show isochrone rings</span>
+                </label>
+              </section>
+
+              <section className="ua-panel">
+                <div className="ua-panelTitle">Hotspot Layer</div>
+                <label className="ua-layerOption">
+                  <input
+                    type="checkbox"
+                    checked={showHotspots}
+                    onChange={(event) => setShowHotspots(event.target.checked)}
+                  />
+                  <span>Show H3 hotspot overlay</span>
+                </label>
+                <div className="ua-legendList" style={{ marginTop: 12 }}>
+                  <div className="ua-legendItem">
+                    <span className="ua-dot" style={{ backgroundColor: "#ff3d3d" }} />
+                    <span className="ua-legendLabel">hot spot</span>
+                  </div>
+                  <div className="ua-legendItem">
+                    <span className="ua-dot" style={{ backgroundColor: "#1ea85a" }} />
+                    <span className="ua-legendLabel">cold spot</span>
+                  </div>
+                  <div className="ua-legendItem">
+                    <span className="ua-dot" style={{ backgroundColor: "#c9c5df" }} />
+                    <span className="ua-legendLabel">not significant</span>
+                  </div>
+                </div>
+              </section>
+
+              <section className="ua-panel">
+                <div className="ua-panelTitle">Incident Matrix</div>
+                <div className="ua-summaryLine">
+                  Processed: <strong>{matrixHeader?.totalIncidents ?? incidents.length}</strong>
+                </div>
+                <div className="ua-summaryLine">
+                  Average time: <strong>{matrixHeader?.averageMinutes ?? "-"}</strong>
+                </div>
+                <div className="ua-summaryLine">
+                  Saved file: <strong>{matrixHeader?.outputFile || "-"}</strong>
+                </div>
+                <div className="ua-summaryLine">
+                  Results page: <Link className="ua-navLink" href="/matrix-results">Open</Link>
+                </div>
+              </section>
+
+              <section className="ua-panel">
+                <div className="ua-panelTitle">Analytics</div>
+                <div className="ua-muted">
+                  Spatial equity metrics and hotspot analysis are available on dedicated pages.
+                </div>
+                <div className="ua-overlayLinks">
+                  <Link className="ua-navLink ua-navLinkActive" href="/equity">
+                    Open Equity Analytics
+                  </Link>
+                  <Link className="ua-navLink" href="/hotspots">
+                    Open Hotspot Analysis
+                  </Link>
+                </div>
+              </section>
+
+              {isochroneError ? (
+                <section className="ua-panel">
+                  <div className="ua-panelTitle">Isochrone Status</div>
+                  <div className="ua-emptyState">{isochroneError}</div>
+                </section>
+              ) : null}
+
+              {matrixError ? (
+                <section className="ua-panel">
+                  <div className="ua-panelTitle">Matrix Status</div>
+                  <div className="ua-emptyState">{matrixError}</div>
+                </section>
+              ) : null}
+            </div>
           </aside>
+          ) : null}
 
           <main
             ref={stageRef}
@@ -442,73 +578,121 @@ export default function MapPage() {
                 >
                   <Marker position={center} />
 
-                  {filteredIncidents.map((incident) => {
-                    const covered =
-                      outerPolygon.length > 0
-                        ? isInside(incident, outerPolygon)
-                        : false;
-                    const matrixResult = matrixByIncident[incident.id];
-                    const minDuration =
-                      typeof incident.minDuration === "number"
-                        ? incident.minDuration
-                        : matrixResult?.minDuration;
-                    const nearestStationId =
-                      incident.nearestStationId ?? matrixResult?.nearestStationId;
+                  {showIncidents &&
+                    filteredIncidents.map((incident) => {
+                      const covered =
+                        outerPolygon.length > 0
+                          ? isInside(incident, outerPolygon)
+                          : false;
+                      const matrixResult = matrixByIncident[incident.id];
+                      const minDuration =
+                        typeof incident.minDuration === "number"
+                          ? incident.minDuration
+                          : matrixResult?.minDuration;
+                      const nearestStationId =
+                        incident.nearestStationId ?? matrixResult?.nearestStationId;
 
-                    return (
+                      return (
+                        <Marker
+                          key={incident.id}
+                          position={{ lat: incident.lat, lng: incident.lng }}
+                          icon={
+                            covered
+                              ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                              : `http://maps.google.com/mapfiles/ms/icons/${
+                                  incident.type === "crime"
+                                    ? "red"
+                                    : incident.type === "hospital"
+                                      ? "blue"
+                                      : "orange"
+                                }-dot.png`
+                          }
+                          opacity={0.84}
+                          title={
+                            nearestStationId && typeof minDuration === "number"
+                              ? `Incident ${incident.id}: station ${nearestStationId}, ${Math.round(minDuration)} sec`
+                              : `Incident ${incident.id}`
+                          }
+                        />
+                      );
+                    })}
+
+                  {showStations &&
+                    stations.map((station) => (
                       <Marker
-                        key={incident.id}
-                        position={{ lat: incident.lat, lng: incident.lng }}
-                        icon={
-                          covered
-                            ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                            : `http://maps.google.com/mapfiles/ms/icons/${
-                                incident.type === "crime"
-                                  ? "red"
-                                  : incident.type === "hospital"
-                                    ? "blue"
-                                    : "orange"
-                              }-dot.png`
-                        }
-                        opacity={0.84}
-                        title={
-                          nearestStationId && typeof minDuration === "number"
-                            ? `Incident ${incident.id}: station ${nearestStationId}, ${Math.round(minDuration)} sec`
-                            : `Incident ${incident.id}`
-                        }
+                        key={station.id}
+                        position={{ lat: station.lat, lng: station.lng }}
+                        icon="http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
+                        label={{
+                          text: `S${station.id}`,
+                          color: "#111111",
+                          fontWeight: "700",
+                        }}
+                        zIndex={1000}
                       />
-                    );
-                  })}
+                    ))}
 
-                  {stations.map((station) => (
-                    <Marker
-                      key={station.id}
-                      position={{ lat: station.lat, lng: station.lng }}
-                      icon="http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
-                      label={{
-                        text: `S${station.id}`,
-                        color: "#111111",
-                        fontWeight: "700",
-                      }}
-                      zIndex={1000}
-                    />
-                  ))}
+                  {showIsochrones &&
+                    polygons.map((poly, index) => (
+                      <Polygon
+                        key={index}
+                        paths={poly.paths}
+                        options={{
+                          fillColor: poly.color,
+                          fillOpacity: 0.16,
+                          strokeColor: poly.color,
+                          strokeWeight: 2,
+                          clickable: false,
+                        }}
+                      />
+                    ))}
 
-                  {polygons.map((poly, index) => (
-                    <Polygon
-                      key={index}
-                      paths={poly.paths}
-                      options={{
-                        fillColor: poly.color,
-                        fillOpacity: 0.16,
-                        strokeColor: poly.color,
-                        strokeWeight: 2,
-                        clickable: false,
-                      }}
-                    />
-                  ))}
+                  {showHotspots &&
+                    hotspotPolygons.map((poly) => (
+                      <Polygon
+                        key={poly.id}
+                        paths={poly.paths}
+                        options={{
+                          fillColor: poly.color,
+                          fillOpacity: poly.fillOpacity,
+                          strokeColor: poly.color,
+                          strokeOpacity: 0.85,
+                          strokeWeight: 1.5,
+                          clickable: false,
+                          zIndex: 2,
+                        }}
+                      />
+                    ))}
                 </GoogleMap>
               )}
+            </div>
+
+            <div className="ua-floatingToolbar">
+              <button
+                className="ua-floatChip"
+                onClick={() => fetchIsochrone(center.lat, center.lng)}
+              >
+                Generate Isochrone
+              </button>
+              <button
+                className={`ua-floatChip ${matrixLoading ? "ua-floatChipActive" : ""}`}
+                onClick={fetchIncidentMatrix}
+                disabled={matrixLoading}
+              >
+                {matrixLoading ? "Running Incident Matrix..." : "Run Incident Matrix"}
+              </button>
+              <button
+                className="ua-floatChip"
+                onClick={() => setSidebarOpen((current) => !current)}
+              >
+                {sidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
+              </button>
+              <button
+                className="ua-floatChip"
+                onClick={() => setShowHeader((current) => !current)}
+              >
+                {showHeader ? "Hide Header" : "Show Header"}
+              </button>
             </div>
 
             <div className="ua-mapCard">
