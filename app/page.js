@@ -383,6 +383,9 @@ export default function MapPage() {
               <Link className="ua-navLink" href="/hotspots">
                 Hotspots
               </Link>
+              <Link className="ua-navLink" href="/fire">
+                Fire Analytics
+              </Link>
             </div>
           </div>
         </header>
@@ -515,6 +518,9 @@ export default function MapPage() {
                   </Link>
                   <Link className="ua-navLink" href="/hotspots">
                     Open Hotspot Analysis
+                  </Link>
+                  <Link className="ua-navLink" href="/fire">
+                    Open Fire Analytics
                   </Link>
                 </div>
               </section>

@@ -271,6 +271,9 @@ export default function EquityPage() {
             <Link className="ua-navLink" href="/hotspots">
               Hotspots
             </Link>
+            <Link className="ua-navLink" href="/fire">
+              Fire Analytics
+            </Link>
           </div>
         </div>
 

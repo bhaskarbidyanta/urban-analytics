@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-04-14T12:50:11.788987Z",
+  "incidentCount": 1000,
+  "stationCount": 8,
+  "recommendedStationCount": 5,
+  "avgResponseSeconds": 516.5,
+  "avgDistanceKm": 5.23,
+  "peakHourMultiplier": 1.1,
+  "nightHourMultiplier": 0.87,
+  "comparison": {
+    "currentHistoricalAvgResponseSeconds": 516.5,
+    "currentModeledAvgResponseSeconds": 516.5,
+    "optimizedModeledAvgResponseSeconds": 442.6,
+    "responseDeltaSeconds": -73.9,
+    "responseDeltaPercent": -14.3,
+    "currentAvgDistanceKm": 5.23,
+    "optimizedAvgDistanceKm": 4.4,
+    "distanceDeltaKm": -0.83,
+    "improvedIncidentShare": 61.3
+  },
+  "elbowInertia": [
+    {
+      "k": 2,
+      "inertia": 2.2
+    },
+    {
+      "k": 3,
+      "inertia": 1.6
+    },
+    {
+      "k": 4,
+      "inertia": 1.0
+    },
+    {
+      "k": 5,
+      "inertia": 0.8
+    },
+    {
+      "k": 6,
+      "inertia": 0.7
+    },
+    {
+      "k": 7,
+      "inertia": 0.6
+    }
+  ],
+  "graphs": {
+    "elbow": "/data/fire/graphs/fire-kmeans-elbow.png",
+    "clusters": "/data/fire/graphs/fire-kmeans-clusters.png",
+    "responseByHour": "/data/fire/graphs/fire-response-by-hour.png"
+  }
+}

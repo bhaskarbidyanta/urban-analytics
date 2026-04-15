@@ -206,6 +206,9 @@ export default function HotspotsPage() {
             <Link className="ua-navLink ua-navLinkActive" href="/hotspots">
               Hotspots
             </Link>
+            <Link className="ua-navLink" href="/fire">
+              Fire Analytics
+            </Link>
           </div>
         </div>
 

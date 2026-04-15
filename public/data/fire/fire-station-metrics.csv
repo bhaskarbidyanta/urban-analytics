@@ -1,0 +1,9 @@
+station_id,station_name,incident_count,avg_distance_km,avg_response_seconds,avg_route_duration_seconds,avg_speed_kmph
+FS-201,Shivajinagar Station,223,5.04,489.0,390.8,37.11
+FS-202,Kothrud Station,12,3.41,416.4,320.9,29.45
+FS-203,Hadapsar Station,205,5.2,448.9,352.6,41.67
+FS-204,Wagholi Station,53,9.79,803.3,686.5,43.88
+FS-205,Kharadi Station,174,4.35,461.1,364.4,33.95
+FS-206,Baner Station,4,5.45,595.2,480.6,32.97
+FS-207,Nigdi Station,148,4.84,497.1,401.4,35.02
+FS-208,Bhosari Station,181,5.44,617.0,502.4,31.74

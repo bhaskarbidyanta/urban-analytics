@@ -4,6 +4,8 @@ networkx
 geopandas
 shapely
 matplotlib
+pandas
+numpy
 
 # Frontend/runtime libraries used by the app
 # These are installed via npm/package.json, documented here for completeness.

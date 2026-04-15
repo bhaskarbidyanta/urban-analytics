@@ -65,6 +65,9 @@ export default async function MatrixResultsPage() {
             <Link className="ua-navLink" href="/hotspots">
               Hotspots
             </Link>
+            <Link className="ua-navLink" href="/fire">
+              Fire Analytics
+            </Link>
           </div>
         </div>
       </header>
