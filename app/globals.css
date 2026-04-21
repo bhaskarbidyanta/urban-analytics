@@ -801,6 +801,38 @@ body {
   font-size: 1.5rem;
 }
 
+.ua-fireKpiRail {
+  grid-template-columns: minmax(180px, 240px);
+  justify-content: stretch;
+  align-items: start;
+  margin-top: 0;
+  gap: 10px;
+}
+
+.ua-fireKpiCard {
+  min-height: 72px;
+  padding: 11px 14px;
+  border-radius: 16px;
+}
+
+.ua-fireKpiCard span {
+  font-size: 0.68rem;
+  letter-spacing: 0.11em;
+}
+
+.ua-fireKpiCard strong {
+  margin-top: 6px;
+  font-size: 1rem;
+  line-height: 1.05;
+}
+
+.ua-fireHeroLayout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
 .ua-fireGrid,
 .ua-fireChartsGrid {
   display: grid;
@@ -998,13 +1030,330 @@ body {
   .ua-hotspotGrid,
   .ua-equityInsights,
   .ua-equityTables,
-  .ua-kpiRow,
+  .ua-fireHeroLayout,
   .ua-fireGrid,
   .ua-fireChartsGrid {
     grid-template-columns: 1fr;
   }
 
+  .ua-kpiRow {
+    grid-template-columns: 1fr;
+  }
+
+  .ua-fireKpiRail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .ua-fireMapShell {
     min-height: 500px;
+  }
+}
+
+.ua-slaShell {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ua-slaTopbar {
+  position: static;
+  margin-bottom: 0;
+}
+
+.ua-slaGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ua-slaKpi {
+  position: relative;
+  overflow: hidden;
+}
+
+.ua-slaKpi::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  border-radius: 22px;
+}
+
+.ua-slaKpi strong {
+  display: block;
+  margin-top: 12px;
+  font-size: clamp(1.2rem, 2vw, 1.9rem);
+  letter-spacing: -0.03em;
+}
+
+.ua-slaKpiNote {
+  display: block;
+  margin-top: 10px;
+  color: rgba(232, 238, 255, 0.78);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.ua-slaKpi-good {
+  background:
+    radial-gradient(circle at top right, rgba(44, 195, 122, 0.18), transparent 40%),
+    linear-gradient(180deg, rgba(12, 36, 25, 0.95), rgba(7, 18, 13, 0.95));
+  border-color: rgba(77, 212, 142, 0.22);
+  box-shadow: 0 18px 34px rgba(8, 36, 23, 0.35);
+}
+
+.ua-slaKpi-good::before,
+.ua-slaStateGood::before {
+  background: linear-gradient(180deg, #81ffb7, #1db954);
+}
+
+.ua-slaKpi-bad {
+  background:
+    radial-gradient(circle at top right, rgba(255, 91, 91, 0.18), transparent 42%),
+    linear-gradient(180deg, rgba(43, 13, 18, 0.96), rgba(20, 8, 10, 0.96));
+  border-color: rgba(255, 107, 107, 0.24);
+  box-shadow: 0 18px 34px rgba(39, 10, 15, 0.35);
+}
+
+.ua-slaKpi-bad::before,
+.ua-slaStateBad::before {
+  background: linear-gradient(180deg, #ff9a9a, #ef4444);
+}
+
+.ua-slaKpi-warn {
+  background:
+    radial-gradient(circle at top right, rgba(255, 190, 92, 0.18), transparent 42%),
+    linear-gradient(180deg, rgba(43, 27, 8, 0.95), rgba(20, 13, 6, 0.96));
+  border-color: rgba(255, 196, 87, 0.22);
+  box-shadow: 0 18px 34px rgba(46, 26, 7, 0.32);
+}
+
+.ua-slaKpi-warn::before,
+.ua-slaStateWarn::before {
+  background: linear-gradient(180deg, #ffd67a, #f59e0b);
+}
+
+.ua-slaKpi-neutral {
+  background:
+    radial-gradient(circle at top right, rgba(69, 183, 255, 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(11, 21, 39, 0.96), rgba(8, 14, 26, 0.96));
+}
+
+.ua-slaKpi-neutral::before {
+  background: linear-gradient(180deg, #7dd3fc, #2563eb);
+}
+
+.ua-slaSignalRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ua-slaMainGrid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.ua-slaSidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ua-slaCardStack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ua-slaAlgoCard {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ua-slaAlgoCard p {
+  margin: 10px 0 0;
+  line-height: 1.45;
+}
+
+.ua-slaAlgoHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ua-slaAlgoHeader strong {
+  font-size: 1rem;
+}
+
+.ua-slaAlgoHeader span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.ua-slaSignalCard {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 20px;
+}
+
+.ua-slaSignalCard::after {
+  content: "";
+  position: absolute;
+  inset: auto -20px -20px auto;
+  width: 110px;
+  height: 110px;
+  border-radius: 999px;
+  opacity: 0.16;
+}
+
+.ua-slaSignalCard strong {
+  display: block;
+  margin-top: 8px;
+  font-size: clamp(1.6rem, 2.8vw, 2.5rem);
+}
+
+.ua-slaSignalCard p {
+  margin: 10px 0 0;
+  color: rgba(232, 238, 255, 0.8);
+  max-width: 40ch;
+  line-height: 1.45;
+}
+
+.ua-slaSignalLabel {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ua-slaSignalCard-good {
+  background: linear-gradient(135deg, rgba(16, 66, 42, 0.98), rgba(7, 26, 18, 0.96));
+  border-color: rgba(87, 232, 153, 0.24);
+}
+
+.ua-slaSignalCard-good .ua-slaSignalLabel {
+  background: rgba(103, 255, 177, 0.14);
+  color: #b8ffd7;
+}
+
+.ua-slaSignalCard-good::after {
+  background: radial-gradient(circle, #38d269 0%, transparent 72%);
+}
+
+.ua-slaSignalCard-bad {
+  background: linear-gradient(135deg, rgba(74, 18, 18, 0.98), rgba(28, 9, 9, 0.96));
+  border-color: rgba(255, 117, 117, 0.24);
+}
+
+.ua-slaSignalCard-bad .ua-slaSignalLabel {
+  background: rgba(255, 121, 121, 0.14);
+  color: #ffc5c5;
+}
+
+.ua-slaSignalCard-bad::after {
+  background: radial-gradient(circle, #ef4444 0%, transparent 72%);
+}
+
+.ua-slaMapPanel {
+  padding-bottom: 18px;
+}
+
+.ua-slaStateGood,
+.ua-slaStateWarn,
+.ua-slaStateBad {
+  position: relative;
+  overflow: hidden;
+}
+
+.ua-slaStateGood::before,
+.ua-slaStateWarn::before,
+.ua-slaStateBad::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+}
+
+.ua-slaMapWrap {
+  height: 68vh;
+  min-height: 620px;
+  overflow: hidden;
+  border-radius: 22px;
+  position: relative;
+  background: #0e1423;
+}
+
+.ua-slaScenario p {
+  margin-top: 0;
+  line-height: 1.5;
+}
+
+.ua-slaLowerGrid {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr 0.9fr;
+  gap: 16px;
+}
+
+.ua-slaTable {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ua-slaTableHeader,
+.ua-slaTableRow {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 0.9fr 0.9fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.ua-slaTableHeader {
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ua-slaTableRow {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 1200px) {
+  .ua-slaGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ua-slaSignalRow,
+  .ua-slaMainGrid,
+  .ua-slaLowerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .ua-slaGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ua-slaMapWrap {
+    min-height: 460px;
+    height: 56vh;
+  }
+
+  .ua-slaTableHeader,
+  .ua-slaTableRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

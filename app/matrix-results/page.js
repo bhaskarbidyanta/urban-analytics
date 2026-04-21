@@ -68,6 +68,9 @@ export default async function MatrixResultsPage() {
             <Link className="ua-navLink" href="/fire">
               Fire Analytics
             </Link>
+            <Link className="ua-navLink" href="/fire-sla">
+              SLA Dashboard
+            </Link>
           </div>
         </div>
       </header>

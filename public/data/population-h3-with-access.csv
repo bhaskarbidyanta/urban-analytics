@@ -2,9 +2,9 @@ incidentId,type,lat,lng,nearestStationId,nearestStationType,minDurationSeconds,m
 86608b0b7ffffff,population,19.066205,72.855228,2,police,203,3.4
 86608b0a7ffffff,population,19.014768,72.826859,5,hospital,491,8.2
 86608b19fffffff,population,19.017965,72.88351,5,hospital,616,10.3
-86608b037ffffff,population,18.915076,72.82677,1,police,350,5.8
-86608b017ffffff,population,18.963334,72.798511,1,police,452,7.5
-86608b18fffffff,population,18.966519,72.855129,1,police,482,8.0
+86608b037ffffff,population,18.915076,72.82677,1,police,335,5.6
+86608b017ffffff,population,18.963334,72.798511,1,police,454,7.6
+86608b18fffffff,population,18.966519,72.855129,1,police,478,8.0
 86608b54fffffff,population,19.117645,72.883619,6,hospital,270,4.5
 86608b467ffffff,population,19.165841,72.855327,6,hospital,633,10.5
 86608b557ffffff,population,19.17232,72.968781,3,police,272,4.5
@@ -13,7 +13,7 @@ incidentId,type,lat,lng,nearestStationId,nearestStationType,minDurationSeconds,m
 86608b46fffffff,population,19.16258,72.79867,6,hospital,1451,24.2
 86608b517ffffff,population,19.230218,73.110954,3,police,1277,21.3
 86608b477ffffff,population,19.217275,72.883727,12,fire,851,14.2
-86608b197ffffff,population,19.021147,72.940207,2,police,915,15.2
+86608b197ffffff,population,19.021147,72.940207,2,police,919,15.3
 86608b507ffffff,population,19.178738,73.082421,11,fire,1119,18.7
 86608b427ffffff,population,19.223776,72.997248,3,police,427,7.1
 86608b407ffffff,population,19.27198,72.96892,7,hospital,533,8.9

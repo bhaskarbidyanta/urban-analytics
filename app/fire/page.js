@@ -297,6 +297,9 @@ export default function FirePage() {
             <Link className="ua-navLink ua-navLinkActive" href="/fire">
               Fire Analytics
             </Link>
+            <Link className="ua-navLink" href="/fire-sla">
+              SLA Dashboard
+            </Link>
           </div>
         </div>
       </header>
@@ -307,17 +310,18 @@ export default function FirePage() {
         </section>
       ) : null}
 
-      <section className="ua-kpiRow">
-        {summaryKpis.map((kpi) => (
-          <div key={kpi.label} className="ua-kpiCard ua-kpiCardHotspot">
-            <span>{kpi.label}</span>
-            <strong className={kpi.tone}>{kpi.value}</strong>
-          </div>
-        ))}
-      </section>
+      <section className="ua-fireHeroLayout">
+        <section className="ua-kpiRow ua-fireKpiRail">
+          {summaryKpis.map((kpi) => (
+            <div key={kpi.label} className="ua-kpiCard ua-kpiCardHotspot ua-fireKpiCard">
+              <span>{kpi.label}</span>
+              <strong className={kpi.tone}>{kpi.value}</strong>
+            </div>
+          ))}
+        </section>
 
-      <section className="ua-fireGrid">
-        <article className="ua-panel ua-fireMapPanel">
+        <section className="ua-fireGrid">
+          <article className="ua-panel ua-fireMapPanel">
           <div className="ua-fireMapHeader">
             <div>
               <div className="ua-cardKicker ua-cardKickerHotspot">Operational Map</div>
@@ -482,9 +486,9 @@ export default function FirePage() {
           <div className="ua-fireMapFooter">
             Showing {displayedIncidents.length} of {filteredIncidents.length} filtered incidents in Pune-PCMC.
           </div>
-        </article>
+          </article>
 
-        <aside className="ua-fireSidebar">
+          <aside className="ua-fireSidebar">
           <section className="ua-panel">
             <div className="ua-panelTitle">Selected Incident</div>
             {selectedIncident ? (
@@ -564,7 +568,8 @@ export default function FirePage() {
               </div>
             </div>
           </section>
-        </aside>
+          </aside>
+        </section>
       </section>
 
       <section className="ua-fireChartsGrid">
