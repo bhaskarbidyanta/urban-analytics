@@ -82,6 +82,30 @@ function formatMetric(value, digits = 2, suffix = "") {
     : "-";
 }
 
+function formatCompactPopulation(value) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "-";
+  }
+
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1)}M`;
+  }
+
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(1)}K`;
+  }
+
+  return String(value);
+}
+
+function formatCompactMinutes(value) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "-";
+  }
+
+  return `${value.toFixed(1)}m`;
+}
+
 function getEquityInterpretation(gini) {
   if (typeof gini !== "number") {
     return "Run the equity matrix to compute weighted inequality across the synthetic H3 zones.";
@@ -96,6 +120,56 @@ function getEquityInterpretation(gini) {
   }
 
   return "Access is strongly unequal across zones and station catchments.";
+}
+
+function Tooltip({ text }) {
+  return (
+    <span className="group relative inline-flex">
+      <button className="ua-navLink" type="button">
+        Info
+      </button>
+      <span
+        className="ua-panel"
+        style={{
+          display: "none",
+          position: "absolute",
+          top: "calc(100% + 8px)",
+          left: 0,
+          width: 260,
+          zIndex: 20,
+          fontSize: "0.85rem",
+          lineHeight: 1.5,
+        }}
+      >
+        {text}
+      </span>
+      <style jsx>{`
+        .group:hover span,
+        .group:focus-within span {
+          display: block;
+        }
+      `}</style>
+    </span>
+  );
+}
+
+function SparkMini({ bars }) {
+  return (
+    <div style={{ display: "flex", gap: 4, alignItems: "end", height: 26, marginTop: 10 }}>
+      {bars.map((bar, index) => (
+        <span
+          key={index}
+          style={{
+            width: 10,
+            height: `${16 + bar * 18}px`,
+            borderRadius: 999,
+            background: "linear-gradient(180deg, #9ff8ff, #4fd1ff)",
+            display: "inline-block",
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 function LorenzChart({ points }) {
@@ -345,24 +419,28 @@ export default function EquityPage() {
 
         <div className="ua-kpiRow">
           <div className="ua-kpiCard">
-            <span>Weighted Gini</span>
+            <span>Weighted Gini <Tooltip text="Weighted Gini measures inequality in access times, where 0 is equal access and 1 is concentrated disadvantage." /></span>
             <strong>{formatMetric(weightedGini)}</strong>
+            <SparkMini bars={[0.2, 0.4, 0.5, Math.min(weightedGini || 0, 1)]} />
           </div>
           <div className="ua-kpiCard">
-            <span>Weighted Theil</span>
+            <span>Weighted Theil <Tooltip text="Weighted Theil is an entropy-style inequality measure that grows as response times diverge from the weighted mean." /></span>
             <strong>{formatMetric(weightedTheil)}</strong>
+            <SparkMini bars={[0.25, 0.35, 0.45, Math.min(weightedTheil || 0, 1)]} />
           </div>
           <div className="ua-kpiCard">
             <span>Mean Response</span>
-            <strong>{formatMetric(weightedMeanMinutes, 1, " min")}</strong>
+            <strong>{formatCompactMinutes(weightedMeanMinutes)}</strong>
+            <SparkMini bars={[0.35, 0.42, 0.5, Math.min((weightedMeanMinutes || 0) / 20, 1)]} />
           </div>
           <div className="ua-kpiCard">
             <span>Served Population</span>
-            <strong>{servedPopulation.toLocaleString()}</strong>
+            <strong>{formatCompactPopulation(servedPopulation)}</strong>
+            <SparkMini bars={[0.25, 0.5, 0.68, Math.min(servedPopulation / 10000000, 1)]} />
           </div>
         </div>
 
-        <div className="ua-equityInsights">
+        <div className="ua-equityInsights" style={{ gridTemplateColumns: "1.1fr 0.9fr" }}>
           <article className="ua-insightCard">
             <div className="ua-cardKicker">Lorenz Curve</div>
             <LorenzChart points={lorenzPoints} />

@@ -107,8 +107,7 @@ export default function FirePage() {
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
   const [selectedLocality, setSelectedLocality] = useState("all");
   const [scenario, setScenario] = useState("historical");
-  const [showCurrentStations, setShowCurrentStations] = useState(true);
-  const [showRecommendedStations, setShowRecommendedStations] = useState(true);
+  const [comparisonMode, setComparisonMode] = useState("recommended");
   const [kValue, setKValue] = useState(5);
   const [optimizationLoading, setOptimizationLoading] = useState(false);
   const [optimizationError, setOptimizationError] = useState("");
@@ -116,6 +115,8 @@ export default function FirePage() {
   const [estimateLoading, setEstimateLoading] = useState(false);
   const [estimateError, setEstimateError] = useState("");
   const [estimateResult, setEstimateResult] = useState(null);
+  const showCurrentStations = comparisonMode === "current";
+  const showRecommendedStations = comparisonMode === "recommended";
 
   useEffect(() => {
     const loadData = async () => {
@@ -364,22 +365,22 @@ export default function FirePage() {
                   ))}
                 </select>
               </label>
-              <label className="ua-layerOption">
-                <input
-                  type="checkbox"
-                  checked={showCurrentStations}
-                  onChange={(event) => setShowCurrentStations(event.target.checked)}
-                />
-                <span>Current stations</span>
-              </label>
-              <label className="ua-layerOption">
-                <input
-                  type="checkbox"
-                  checked={showRecommendedStations}
-                  onChange={(event) => setShowRecommendedStations(event.target.checked)}
-                />
-                <span>Recommended stations</span>
-              </label>
+              <div className="ua-fireControls">
+                <button
+                  className={`ua-navLink ${comparisonMode === "current" ? "ua-navLinkActive" : ""}`}
+                  onClick={() => setComparisonMode("current")}
+                  type="button"
+                >
+                  Current Network
+                </button>
+                <button
+                  className={`ua-navLink ${comparisonMode === "recommended" ? "ua-navLinkActive" : ""}`}
+                  onClick={() => setComparisonMode("recommended")}
+                  type="button"
+                >
+                  Recommended Network
+                </button>
+              </div>
             </div>
           </div>
 

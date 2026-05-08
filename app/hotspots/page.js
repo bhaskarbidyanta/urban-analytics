@@ -54,6 +54,7 @@ export default function HotspotsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fileLoaded, setFileLoaded] = useState(false);
+  const [rankMode, setRankMode] = useState("top");
 
   useEffect(() => {
     const loadData = async () => {
@@ -186,6 +187,18 @@ export default function HotspotsPage() {
     ["Hot spot (90%)", hotspotRows.filter((row) => row.classification === "hotspot_90")],
     ["Cold spot (90-99%)", hotspotRows.filter((row) => row.classification.startsWith("coldspot"))],
   ].filter(([, rows]) => rows.length > 0);
+  const rankedRows =
+    rankMode === "top"
+      ? [...significantRows].sort((left, right) => right.giStar - left.giStar).slice(0, 10)
+      : [...significantRows].sort((left, right) => left.giStar - right.giStar).slice(0, 10);
+
+  const renderBadge = (row) => {
+    const hot = row.classification.startsWith("hotspot");
+    const label = hot ? row.label.replace("Hot spot", "Hot Spot") : row.label.replace("Cold spot", "Cold Spot");
+    const className = hot ? "ua-hotBadgeHot" : "ua-hotBadgeCold";
+
+    return <span className={`ua-hotBadge ${className}`}>{label}</span>;
+  };
 
   return (
     <div className="ua-shellSimple ua-resultsPage">
@@ -344,15 +357,40 @@ export default function HotspotsPage() {
           <div className="ua-cardKicker ua-cardKickerHotspot">Hotspot Regions</div>
           {significantRows.length > 0 ? (
             <div className="ua-table ua-tableCompactHead">
+              <div className="ua-overlayLinks" style={{ marginTop: 0, marginBottom: 12 }}>
+                <button
+                  className={`ua-navLink ${rankMode === "top" ? "ua-navLinkActive" : ""}`}
+                  onClick={() => setRankMode("top")}
+                  type="button"
+                >
+                  Top 10
+                </button>
+                <button
+                  className={`ua-navLink ${rankMode === "bottom" ? "ua-navLinkActive" : ""}`}
+                  onClick={() => setRankMode("bottom")}
+                  type="button"
+                >
+                  Bottom 10
+                </button>
+              </div>
               <div className="ua-tableHead ua-tableHeadHotspot">
                 <span>Region</span>
-                <span>Class</span>
+                <span>Badge</span>
                 <span>Gi* z-score</span>
               </div>
-              {significantRows.map((row) => (
+              {rankedRows.map((row) => (
                 <div key={row.id} className="ua-tableRow">
-                  <span>{row.regionName}</span>
-                  <span>{row.label}</span>
+                  <span>
+                    {row.regionName}
+                    <Link
+                      className="ua-navLink"
+                      href={`/?lat=${row.lat}&lng=${row.lng}&zoom=13`}
+                      style={{ marginLeft: 10 }}
+                    >
+                      Locate on Map
+                    </Link>
+                  </span>
+                  <span>{renderBadge(row)}</span>
                   <strong>{formatMetric(row.giStar)}</strong>
                 </div>
               ))}

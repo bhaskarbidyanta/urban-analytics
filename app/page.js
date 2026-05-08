@@ -1,6 +1,11 @@
 "use client";
 
-import { GoogleMap, Marker, Polygon, useJsApiLoader } from "@react-google-maps/api";
+import {
+  GoogleMap,
+  Marker,
+  Polygon,
+  useJsApiLoader,
+} from "@react-google-maps/api";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,6 +33,15 @@ const darkMapStyles = [
   { featureType: "road", elementType: "geometry", stylers: [{ color: "#1a2236" }] },
   { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#0c111d" }] },
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#080b15" }] },
+];
+const grayscaleMapStyles = [
+  { elementType: "geometry", stylers: [{ color: "#121722" }, { saturation: -100 }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#121722" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8a8f9c" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#222838" }, { saturation: -100 }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#101420" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0b1018" }, { saturation: -100 }] },
+  { featureType: "poi", stylers: [{ saturation: -100 }, { lightness: -20 }] },
 ];
 
 function getGradientColor(t) {
@@ -162,6 +176,7 @@ export default function MapPage() {
   const [showStations, setShowStations] = useState(true);
   const [showIsochrones, setShowIsochrones] = useState(true);
   const [showHotspots, setShowHotspots] = useState(true);
+  const [viewSettingsOpen, setViewSettingsOpen] = useState(false);
   const [focusRadiusKm, setFocusRadiusKm] = useState(1.6);
   const [hoverPoint, setHoverPoint] = useState(null);
   const [hoverGeoPoint, setHoverGeoPoint] = useState(null);
@@ -214,6 +229,32 @@ export default function MapPage() {
     };
 
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const latParam = params.get("lat");
+    const lngParam = params.get("lng");
+    const zoomParam = params.get("zoom");
+    const lat = latParam == null ? NaN : Number(latParam);
+    const lng = lngParam == null ? NaN : Number(lngParam);
+    const zoom = zoomParam == null ? NaN : Number(zoomParam);
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      setCenter({ lat, lng });
+
+      if (mapRef.current) {
+        mapRef.current.panTo({ lat, lng });
+      }
+    }
+
+    if (Number.isFinite(zoom) && mapRef.current) {
+      mapRef.current.setZoom(zoom);
+    }
+
+    if (Number.isFinite(zoom)) {
+      setMapZoom(zoom);
+    }
   }, []);
 
   const filteredIncidents =
@@ -362,6 +403,28 @@ export default function MapPage() {
       fillOpacity: getHotspotFillOpacity(row.classification),
     }));
   }, [hotspotRingSize, populationAccessByCell, populationCells]);
+  const dimBackgroundForIsochrone = showIsochrones && polygons.length > 0;
+  const activeLegendItems = useMemo(() => {
+    const items = [];
+
+    if (showIncidents) {
+      items.push({ id: "incidents", color: "#ff8447", label: "Incident clusters" });
+    }
+
+    if (showStations) {
+      items.push({ id: "stations", color: "#facc15", label: "Station markers" });
+    }
+
+    if (showIsochrones && polygons.length > 0) {
+      items.push({ id: "isochrones", color: "#7dd3fc", label: "Isochrone catchments" });
+    }
+
+    if (showHotspots) {
+      items.push({ id: "hotspots", color: "#ff3d3d", label: "Hotspot overlay" });
+    }
+
+    return items;
+  }, [polygons.length, showHotspots, showIncidents, showIsochrones, showStations]);
 
   return (
       <div className={`ua-shell ua-shellSimple ua-shellMap ${showHeader ? "" : "ua-shellMapHeaderHidden"}`}>
@@ -564,7 +627,7 @@ export default function MapPage() {
                 <GoogleMap
                   mapContainerStyle={{ width: "100%", height: "100%" }}
                   center={center}
-                  zoom={12}
+                  zoom={mapZoom}
                   onLoad={(map) => {
                     mapRef.current = map;
                     setMapZoom(map.getZoom() || 12);
@@ -581,7 +644,7 @@ export default function MapPage() {
                     streetViewControl: false,
                     mapTypeControl: false,
                     fullscreenControl: false,
-                    styles: darkMapStyles,
+                    styles: dimBackgroundForIsochrone ? grayscaleMapStyles : darkMapStyles,
                     gestureHandling: "greedy",
                   }}
                 >
@@ -690,18 +753,34 @@ export default function MapPage() {
               >
                 {matrixLoading ? "Running Incident Matrix..." : "Run Incident Matrix"}
               </button>
-              <button
-                className="ua-floatChip"
-                onClick={() => setSidebarOpen((current) => !current)}
-              >
-                {sidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
-              </button>
-              <button
-                className="ua-floatChip"
-                onClick={() => setShowHeader((current) => !current)}
-              >
-                {showHeader ? "Hide Header" : "Show Header"}
-              </button>
+              <div className="ua-layerMenu">
+                <button
+                  className={`ua-floatChip ${viewSettingsOpen ? "ua-floatChipActive" : ""}`}
+                  onClick={() => setViewSettingsOpen((current) => !current)}
+                >
+                  View Settings
+                </button>
+                {viewSettingsOpen ? (
+                  <div className="ua-layerDropdown">
+                    <label className="ua-layerOption">
+                      <input
+                        type="checkbox"
+                        checked={sidebarOpen}
+                        onChange={(event) => setSidebarOpen(event.target.checked)}
+                      />
+                      <span>Show sidebar</span>
+                    </label>
+                    <label className="ua-layerOption">
+                      <input
+                        type="checkbox"
+                        checked={showHeader}
+                        onChange={(event) => setShowHeader(event.target.checked)}
+                      />
+                      <span>Show header</span>
+                    </label>
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <div className="ua-mapCard">
@@ -712,6 +791,20 @@ export default function MapPage() {
                 {hoverGeoPoint ? `${radiusKilometers.toFixed(2)} km` : "-"}
               </div>
             </div>
+
+            {activeLegendItems.length > 0 ? (
+              <div className="ua-mapLegendFloat">
+                {activeLegendItems.map((item) => (
+                  <div key={item.id} className="ua-fireLegendItem">
+                    <span
+                      className="ua-fireLegendSwatch"
+                      style={{ background: item.color }}
+                    />
+                    <span>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
             {hoverPoint && (
               <div

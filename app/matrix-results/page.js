@@ -2,6 +2,7 @@ import Link from "next/link";
 import { readFile } from "fs/promises";
 import path from "path";
 import { parseCsv } from "../lib/csv";
+import MatrixTableClient from "./MatrixTableClient";
 
 async function getMatrixRows() {
   try {
@@ -100,36 +101,7 @@ export default async function MatrixResultsPage() {
       <section className="ua-panel ua-resultsTablePage">
         <div className="ua-panelTitle">Matrix Calculation Table</div>
         {rows.length > 0 ? (
-          <div className="ua-resultsScroll">
-            <table className="ua-fullTable">
-              <thead>
-                <tr>
-                  <th>Incident</th>
-                  <th>Type</th>
-                  <th>Latitude</th>
-                  <th>Longitude</th>
-                  <th>Nearest Station</th>
-                  <th>Station Type</th>
-                  <th>Seconds</th>
-                  <th>Minutes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.incidentId}>
-                    <td>{row.incidentId}</td>
-                    <td>{row.type}</td>
-                    <td>{row.lat}</td>
-                    <td>{row.lng}</td>
-                    <td>{row.nearestStationId}</td>
-                    <td>{row.nearestStationType}</td>
-                    <td>{row.minDurationSeconds}</td>
-                    <td>{row.minDurationMinutes}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <MatrixTableClient rows={rows} />
         ) : (
           <div className="ua-emptyState">
             Run the matrix from the map page to generate the calculations file.
